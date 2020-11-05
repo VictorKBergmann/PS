@@ -5,12 +5,11 @@ import java.util.ArrayList;
 public class Memory {
 
  ArrayList<Short> men;
- int stackPointer;
  int dataPointer;
+
 
  public Memory(){
   men = new ArrayList<Short>(512);
-  stackPointer = 511;
 
  }
  public Short getData(int position) {
@@ -21,12 +20,12 @@ public class Memory {
   men.set(position, data);
  }
 
- public int getStackPointer() {
-  return stackPointer;
- }
-
  public void setDataPointer(int dataPointer) {
   this.dataPointer = dataPointer;
+ }
+
+ public int getDataPointer() {
+  return dataPointer;
  }
 
  public void updateDataPointer() {
