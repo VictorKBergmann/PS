@@ -1,5 +1,7 @@
 package sample;
 
+import java.util.Scanner;
+
 public class Main {
 
 //inicializa memoria
@@ -14,7 +16,7 @@ public class Main {
     Short IR , MAR, ACC;
     byte MOP;
     int numOpp;
-
+    Scanner scanner;
 
     public Main(){
         ula = new ULA();
@@ -23,6 +25,7 @@ public class Main {
         IR = 0;
         MAR = 0;
         ACC = 0;
+
     }
 
     private void Program() {
@@ -35,39 +38,56 @@ public class Main {
 
             switch (numOpp) {
                 case 11:
-                    MAR = memory.getData(controller.getProgramCounter() + 1);
+                    controller.incrementProgramCounter();
+                    MAR = memory.getData(controller.getProgramCounter());
                     ACC = ula.operation(IR, ACC, MAR);
                     break;
                 case 21:
                     controller.incrementProgramCounter();
-                    MAR = memory.getData(controller.getProgramCounter() + 1);
+                    MAR = memory.getData(controller.getProgramCounter());
                     controller.operation(IR, ACC, MAR);
                     break;
-                case 30:// copy
+                case 33:// copy
+                    controller.incrementProgramCounter();
+                    MAR = memory.getData(controller.getProgramCounter() + 1);
+                    ACC = memory.getData(MAR);
+                    MAR = memory.getData(controller.getProgramCounter());
+                    memory.setData(controller.getProgramCounter(), ACC);
                     break;
                 case 31://load
+                    controller.incrementProgramCounter();
+                    ACC = memory.getData(controller.getProgramCounter());
+                    break;
+                case 32://store
+                    controller.incrementProgramCounter();
+                    MAR = memory.getData(controller.getProgramCounter());
+                    memory.setData(MAR, ACC);
+                    break;
+                case 40:
+                    controller.setProgramCounter(controller.getStackPointer());
+                    controller.decrementStackPointer();
+                    break;
+                case 41://call
+                    memory.setData(controller.getStackPointer(), controller.getProgramCounter());
+                    controller.incrementStackPointer();
+                    controller.incrementProgramCounter();
+                    MAR = memory.getData(controller.getProgramCounter());
+                    controller.setProgramCounter(MAR);
+                case 51://write
+                    controller.incrementProgramCounter();
+                    System.out.println(memory.getData(controller.getProgramCounter()));
+                    break;
+                case 52://read
+                    controller.incrementProgramCounter();
+                    scanner = new Scanner(System.in);
+                    memory.setData(controller.getProgramCounter(), scanner.nextShort());
                     break;
                 default:
                     break;
-
             }
             if(!(numOpp == 20))  controller.incrementProgramCounter();
         }
 
-
-        // CPU = new CPU();
-        // = 1
-        // WHILE{
-        //
-        //   ATUALIZA RI
-        //   MANDA RI PRO CONTROLER
-        //   CONTROLER RETORNA QUANTOS OPERANDOS
-        //   MANDA PRO CONTROLLER (RI, OPERANDOS)
-        //   BUSCA O OPERANDO
-        //   CONTROLLER CHAMA A OPERAÇÃO
-        //   ULA EXECUTA A OPERAÇÃO
-        //   ATUALIZA PC
-        //
 
         System.out.println("hello world!");
 
