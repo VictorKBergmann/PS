@@ -4,14 +4,14 @@ import java.util.ArrayList;
 
 public class Memory {
 
- ArrayList<Short> men;
- int dataPointer;
+ private static ArrayList<Short> men;
+ private static int dataPointer;
 
 
  public Memory(){
   men = new ArrayList<Short>(512);
-
  }
+
  public Short getData(int position) {
   return (men.get(position));
  }
@@ -32,7 +32,5 @@ public class Memory {
   //TODO
   //LE TUDO ATÉ ACHAR O STOP
  }
-
-
 
 }
