@@ -12,15 +12,21 @@ public class PS {
         String data;
         boolean signal = true;
 
-
-        while(signal){            
-            data = cpu.read(mem);
-            System.out.println("Palavra que buscou no read: " + data);
-            signal = cpu.execute(data, mem); 
-            System.out.println("Acumulador: " + cpu.getAcc());
-            System.out.println("Memoria 31:" +mem.getData(31));
-            System.out.println("Memoria 32:" +mem.getData(32));
-        }        
+        try{
+            while(signal){
+                data = cpu.read(mem);
+                System.out.println("\nPalavra que buscou no read: " + data);
+                signal = cpu.execute(data, mem); 
+                System.out.println("RE: " + cpu.getRe());
+                System.out.println("Acumulador: " + cpu.getAcc());
+                System.out.println("Memoria 44:" +mem.getData(44));
+                System.out.println("Memoria 31:" +mem.getData(31));
+                System.out.println("Memoria 32:" +mem.getData(32));
+            }
+        }
+        catch(IllegalArgumentException e) {
+            System.out.println("\nErro! Tentativa de acessar a memória de instruções.");
+        }
     }
     
 }
