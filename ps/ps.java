@@ -1,12 +1,13 @@
 
 package ps;
 
-public class ps {
-    
+public class PS {
+
     public static void main(String[] args) {
+        // TODO code application logic here
         Memory mem = new Memory();
-        Cpu cpu = new Cpu();
         //Loader loader = new Loader(mem);
+        Cpu cpu = new Cpu();
 
         String data;
         boolean signal = true;
@@ -18,6 +19,8 @@ public class ps {
             signal = cpu.execute(data, mem); 
             System.out.println("Acumulador: " + cpu.getAcc());
             System.out.println("Memoria 31:" +mem.getData(31));
+            System.out.println("Memoria 32:" +mem.getData(32));
         }        
-    }  
+    }
+    
 }
