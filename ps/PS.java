@@ -1,5 +1,8 @@
-
 package ps;
+
+import gui.GUI;
+
+import java.awt.*;
 
 public class PS {
 
@@ -27,6 +30,14 @@ public class PS {
         catch(IllegalArgumentException e) {
             System.out.println("\nErro! Tentativa de acessar a memória de instruções.");
         }
+
+        /*EventQueue.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                GUI gui = new GUI(mem, cpu);
+                gui.setVisible(true);
+            }
+        });*/
     }
     
 }

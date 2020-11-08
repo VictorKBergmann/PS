@@ -46,6 +46,9 @@ public class Memory {
         }
         mem.set(position, data);
     }
-    
+
+    public ArrayList<String> getMem() {
+        return mem;
+    }
 }
 
