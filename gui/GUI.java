@@ -4,6 +4,8 @@ import ps.Cpu;
 import ps.Memory;
 
 import javax.swing.*;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DefaultHighlighter;
 import java.awt.*;
 
 public class GUI extends JFrame {
@@ -12,9 +14,10 @@ public class GUI extends JFrame {
     private Cpu cpu;
 
     private JComboBox opModeComboBox;
-    private String[] opMode = {"Mode 1", "Mode 2", "Mode 3"};
+    private String[] opMode = {"Mode 1", "Mode 2"};
 
-    private JList memoryList;
+    private JTable memoryTable;
+    private final JScrollPane memoryScrollPane;
 
     private final JButton runButton;
     private final JButton cleanButton;
@@ -37,9 +40,13 @@ public class GUI extends JFrame {
     private final JLabel adressValueLabel;
 
     private final JTextArea textArea;
-
     private final JScrollPane textAreaScrollPane;
-    private final JScrollPane memoryScrollPane;
+    private int currentLine;
+    private DefaultHighlighter highlighter;
+    private DefaultHighlighter.DefaultHighlightPainter painter;
+
+    private final JTextArea consoleArea;
+    private final JScrollPane consoleAreaScrollPane;
 
     private final GroupLayout layout;
 
@@ -67,11 +74,24 @@ public class GUI extends JFrame {
         textArea = new JTextArea();
         textArea.setLineWrap(true);
         textArea.setWrapStyleWord(true);
+        highlighter = (DefaultHighlighter)textArea.getHighlighter();
+        highlighter.setDrawsLayeredHighlights(false);
+        painter = new DefaultHighlighter.DefaultHighlightPainter( Color.YELLOW );
+        currentLine = 0;
 
         textAreaScrollPane = new JScrollPane(textArea,
                 ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         textAreaScrollPane.setMaximumSize(new Dimension(400, 700));
+
+        consoleArea = new JTextArea();
+        consoleArea.setLineWrap(true);
+        consoleArea.setWrapStyleWord(true);
+
+        consoleAreaScrollPane = new JScrollPane(consoleArea,
+                ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        consoleAreaScrollPane.setMaximumSize(new Dimension(400, 100));
 
         opModeComboBox = new JComboBox(opMode);
         opModeComboBox.setMaximumSize(opModeComboBox.getPreferredSize());
@@ -79,29 +99,27 @@ public class GUI extends JFrame {
 
         runButton = new JButton();
         runButton.setText("Run");
-        runButton.addActionListener(e -> {
-            accValueLabel.setText(Integer.toString(cpu.getAcc()));
-            pcValueLabel.setText(Integer.toString(cpu.getPc()));
-            spValueLabel.setText(Integer.toString(cpu.getSp()));
-            riValueLabel.setText(cpu.getRi());
-            reValueLabel.setText(cpu.getRe());
-            memoryList.updateUI();
-        });
+        runButton.addActionListener(e -> runButtonListener());
 
         cleanButton = new JButton();
         cleanButton.setText("Clean");
-        cleanButton.addActionListener(e -> textArea.setText(""));
+        cleanButton.addActionListener(e -> cleanButtonListener());
 
         stepButton = new JButton();
         stepButton.setText("Step");
-        //stepButton.addActionListener();
+        stepButton.addActionListener(e -> stepButtonListener());
 
-        String[] list = new String[mem.getMem().size()];
-        //for (int i=0; i<512; i++) {
-        //    list[i] = i+1 + " - ";
-        //}
-        memoryList = new JList(mem.getMem().toArray(list));
-        memoryScrollPane = new JScrollPane(memoryList);
+        String[][] list = new String[mem.getMem().size()][2];
+        String[] columnNames = {"Position", "Value"};
+        String[] memList = mem.getMem().toArray(new String[mem.getMem().size()]);
+        for (int i=0; i<mem.getMem().size(); i++) {
+            list[i][0] = Integer.toString(i+1);
+            list[i][1] = memList[i];
+        }
+        memoryTable = new JTable(list, columnNames);
+        memoryTable.setEnabled(false);
+        memoryTable.getColumnModel().getColumn(0).setPreferredWidth(10);
+        memoryScrollPane = new JScrollPane(memoryTable);
         memoryScrollPane.setMaximumSize(new Dimension(200, 700));
 
         layout = new GroupLayout(getContentPane());
@@ -129,7 +147,9 @@ public class GUI extends JFrame {
     private GroupLayout.Group getHorizontalGroup() {
 
         return layout.createSequentialGroup()
-                .addComponent(textAreaScrollPane)
+                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                        .addComponent(textAreaScrollPane)
+                        .addComponent(consoleAreaScrollPane))
                 .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
                         .addGap(200)
                         .addGroup(layout.createSequentialGroup()
@@ -175,7 +195,9 @@ public class GUI extends JFrame {
     private GroupLayout.Group getVerticalGroup() {
 
         return layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
-                .addComponent(textAreaScrollPane)
+                .addGroup(layout.createSequentialGroup()
+                        .addComponent(textAreaScrollPane)
+                        .addComponent(consoleAreaScrollPane))
                 .addGroup(layout.createSequentialGroup()
                         .addGap(200)
                         .addGroup(layout.createParallelGroup()
@@ -215,6 +237,39 @@ public class GUI extends JFrame {
                         .addGap(30)
                         .addComponent(stepButton))
                 .addComponent(memoryScrollPane);
+
+    }
+
+    private void stepButtonListener() {
+
+        try {
+            highlighter.removeAllHighlights();
+            highlighter.addHighlight(
+                    textArea.getLineStartOffset(currentLine),
+                    textArea.getLineEndOffset(currentLine),
+                    painter);
+            currentLine++;
+        } catch (BadLocationException badLocationException) {
+            badLocationException.printStackTrace();
+        }
+
+    }
+
+    private void runButtonListener() {
+
+        accValueLabel.setText(Integer.toString(cpu.getAcc()));
+        pcValueLabel.setText(Integer.toString(cpu.getPc()));
+        spValueLabel.setText(Integer.toString(cpu.getSp()));
+        riValueLabel.setText(cpu.getRi());
+        reValueLabel.setText(cpu.getRe());
+        memoryTable.updateUI();
+
+    }
+
+    private void cleanButtonListener() {
+
+        currentLine = 0;
+        textArea.setText("");
 
     }
 }
