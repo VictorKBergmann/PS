@@ -17,7 +17,7 @@ public class Loader {
     }
 
     public void readFile(String adress){
-        try {   
+        try{   
             FileInputStream file  = new FileInputStream(adress);
             input = new InputStreamReader(file); //""
         }
@@ -29,18 +29,20 @@ public class Loader {
     public void loadAllWordsFromString(String string){
         
         int position = initPosition;
-        int flag;  
+        int flag;
+        int flag2=-1;  
         String line;
         Scanner scanner = new Scanner(string);
 
         while(scanner.hasNextLine()){
 
             line = scanner.nextLine();
+            ++flag2;
             if( line.length() == 16 || line.length() == 32 || line.length() == 48 ){
 
                 for(flag = 0; flag< line.length(); ++flag){
                     if( !(line.codePointAt(flag) == 48 || line.codePointAt(flag) == 49) ){
-                        System.out.println("Símbolo "+ line.charAt(flag) + " da posição " + flag +" da palavra " + (position-initPosition) + " não é 1 ou 0, instrução será ignorada.");
+                        System.out.println("Símbolo "+ line.charAt(flag) + " da posição " + flag +" da instrução " +flag2 + " não é 1 ou 0, instrução será ignorada.");
                         flag = line.length() +1;
                      }
                 }
@@ -67,7 +69,7 @@ public class Loader {
                 }
             }
             else{
-                System.out.println("Palavra "+ (position-initPosition) + " não está no tamanho correto, ela será ignorada.");    
+                System.out.println("instrução "+ flag2 + " não está no tamanho correto, ela será ignorada.");    
             }
         }
         memory.setDataPointer(position);
@@ -80,7 +82,8 @@ public class Loader {
             String line;
             int position = initPosition;
             int flag;
-
+            int flag2=0;  
+            
             BufferedReader buffer = new BufferedReader(input);
             line = buffer.readLine();
             
@@ -90,7 +93,7 @@ public class Loader {
 
                     for(flag = 0; flag< line.length(); ++flag){
                         if( !(line.codePointAt(flag) == 48 || line.codePointAt(flag) == 49) ){
-                            System.out.println("Símbolo "+ line.charAt(flag) + " da posição " + flag +" da palavra " + (position-initPosition) + " não é 1 ou 0, instrução será ignorada.");
+                            System.out.println("Símbolo "+ line.charAt(flag) + " da posição " + flag +" da instrução " + flag2 + " não é 1 ou 0, instrução será ignorada.");
                             flag = line.length() +1;
                         }
                     }
@@ -117,9 +120,10 @@ public class Loader {
                     }
                 }
                 else{
-                    System.out.println("Palavra "+ position + " do arquivo txt não está no tamanho correto, ela será ignorada.");
+                    System.out.println("instrução "+ flag2 + " do arquivo txt não está no tamanho correto, ela será ignorada.");
                 }
                 line = buffer.readLine();
+                ++flag2;
             }
             memory.setDataPointer(position);
         }
