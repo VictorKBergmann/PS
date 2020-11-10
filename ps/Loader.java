@@ -17,10 +17,9 @@ public class Loader {
     }
 
     public void readFile(String adress){
-        try {
-            FileInputStream file  = new FileInputStream(adress);//
+        try {   
+            FileInputStream file  = new FileInputStream(adress);
             input = new InputStreamReader(file); //""
-            file.close();
         }
         catch(Exception error){
             System.out.println("Erro na leitura do arquivo "+ adress + " .");
@@ -37,7 +36,7 @@ public class Loader {
         while(scanner.hasNextLine()){
 
             line = scanner.nextLine();
-            if( line.length() == 16 ){
+            if( line.length() == 16 || line.length() == 32 || line.length() == 48 ){
 
                 for(flag = 0; flag< line.length(); ++flag){
                     if( !(line.codePointAt(flag) == 48 || line.codePointAt(flag) == 49) ){
@@ -46,8 +45,25 @@ public class Loader {
                      }
                 }
                 if( flag == line.length() ){
-                    memory.setData(position, line);
-                    ++position;
+
+                    if(flag ==16){
+                        memory.setData(position, line);
+                        ++position;
+                    }
+                    else if(flag ==32){
+                        memory.setData(position, line.substring(0, 16));
+                        ++position;
+                        memory.setData(position, line.substring(16, 32));
+                        ++position;
+                    }
+                    else{
+                        memory.setData(position, line.substring(0, 16));
+                        ++position;
+                        memory.setData(position, line.substring(16, 32));
+                        ++position;
+                        memory.setData(position, line.substring(32, 48));
+                        ++position;
+                    }
                 }
             }
             else{
@@ -55,7 +71,6 @@ public class Loader {
             }
         }
         memory.setDataPointer(position);
-        scanner.close();
     }
 
     public void loadAllWordsFromFile(String adress){
@@ -68,10 +83,10 @@ public class Loader {
 
             BufferedReader buffer = new BufferedReader(input);
             line = buffer.readLine();
-
+            
             while ( line != null ) {
 
-                if( line.length() == 16 ){
+                if( line.length() == 16 || line.length() == 32 || line.length() == 48 ){
 
                     for(flag = 0; flag< line.length(); ++flag){
                         if( !(line.codePointAt(flag) == 48 || line.codePointAt(flag) == 49) ){
@@ -80,8 +95,25 @@ public class Loader {
                         }
                     }
                     if( flag == line.length() ){
-                        memory.setData(position, line);
-                        ++position;
+
+                        if(flag ==16){
+                            memory.setData(position, line);
+                            ++position;
+                        }
+                        else if(flag ==32){
+                            memory.setData(position, line.substring(0, 16));
+                            ++position;
+                            memory.setData(position, line.substring(16, 32));
+                            ++position;
+                        }
+                        else{
+                            memory.setData(position, line.substring(0, 16));
+                            ++position;
+                            memory.setData(position, line.substring(16, 32));
+                            ++position;
+                            memory.setData(position, line.substring(32, 48));
+                            ++position;
+                        }
                     }
                 }
                 else{
