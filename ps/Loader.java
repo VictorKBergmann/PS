@@ -8,12 +8,21 @@ public class Loader {
 
     private InputStreamReader input;
     private int initPosition;
+    private int position;
     private Memory memory;
 
     public Loader (int position, Memory memory){
     
         this.initPosition = position;
         this.memory = memory;
+        setPosition();
+
+    }
+
+    public void setPosition () {
+
+        position = initPosition;
+
     }
 
     public void readFile(String adress){
@@ -27,8 +36,7 @@ public class Loader {
     }
 
     public void loadAllWordsFromString(String string){
-        
-        int position = initPosition;
+
         int flag;
         int flag2=-1;  
         String line;

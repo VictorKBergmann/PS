@@ -1,15 +1,15 @@
 
 package ps;
 
+
+import javax.swing.*;
+
 public class Cpu {
     private String ri, re, pc, sp, acc;
+    private JTextArea pipe;
 
     public Cpu() {
-        ri = "0000000000000000";   //reg de instrução (opcode + endereçamento)
-        re = "0000000000000000";  //reg de endereço de memória
-        acc = "0000000000000000";                 
-        sp = "0000000000000000";
-        pc = "0000000000001101";   //13 = posição inicial memória de instruções
+        init();
     }
 
     public String getAcc() { return acc; }
@@ -20,9 +20,23 @@ public class Cpu {
     
     public String getRe() { return re; }
             
-    public String getSp() { return sp; }            
+    public String getSp() { return sp; }
+
+    public void setPipe(JTextArea pipe) {
+        this.pipe = pipe;
+    }
 
     public String read(Memory mem) { return mem.getInstruction(Integer.parseInt(pc, 2)); }
+
+    public void init() {
+
+        ri = "0000000000000000";   //reg de instrução (opcode + endereçamento)
+        re = "0000000000000000";  //reg de endereço de memória
+        acc = "0000000000000000";
+        sp = "0000000000000000";
+        pc = "0000000000001101";
+
+    }
     
     private String bitsPadding(int reg) {
         String temp2 = Integer.toString(reg,2);     
@@ -168,7 +182,6 @@ public class Cpu {
                     re = value;
                     value = mem.getData(Integer.parseInt(re, 2));
                 }
-                //INTERFACE.print(value);
                 break;
 
             case "1010": //DIVIDE
@@ -195,7 +208,7 @@ public class Cpu {
 
             case "1100": //READ
                 String input = null;
-             //   input = interface.read();
+                //interface
                 pc = pointerIncrement(pc);
                 re = mem.getInstruction(Integer.parseInt(pc, 2));
                 if (ri.substring(9, 12).equals("001")) {

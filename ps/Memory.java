@@ -9,9 +9,7 @@ public class Memory {
 
     public Memory(){
         mem = new ArrayList<>();
-        for(int i=0;i<512;i++)
-            mem.add("0000000000000000");
-        dataPointer = 0;
+        init();
     }
 
     public String getInstruction(int position) {     
@@ -37,13 +35,24 @@ public class Memory {
     public void setDataPointer(int position) {
         dataPointer = position;
     }
-    public ArrayList<String> getMem() {
-        return mem;
-    }
     public String getDataStack(int position) {
         return mem.get(position + 2);
     }
     public void setDataStack(int position, String data) {
         mem.set((position + 2), data);
+    }
+    public ArrayList<String> getMem() {
+        return mem;
+    }
+
+    public void init() {
+
+        if (mem.size() == 0)
+            for(int i=0;i<512;i++) mem.add("0000000000000000");
+        else
+            for(int i=0;i<512;i++) mem.set(i, "0000000000000000");
+
+        dataPointer = 0;
+
     }
 }

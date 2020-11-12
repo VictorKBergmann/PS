@@ -1,22 +1,26 @@
 package gui;
 
 import ps.Cpu;
+import ps.Loader;
 import ps.Memory;
 
 import javax.swing.*;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultHighlighter;
 import java.awt.*;
+import java.util.Arrays;
 
 public class GUI extends JFrame {
 
     private Memory mem;
     private Cpu cpu;
+    private Loader loader;
 
     private JComboBox opModeComboBox;
-    private String[] opMode = {"Mode 1", "Mode 2"};
+    private String[] opMode = {"Continuous Mode", "Debug Mode"};
 
     private JTable memoryTable;
+    private String[][] memoryList;
     private final JScrollPane memoryScrollPane;
 
     private final JButton runButton;
@@ -29,7 +33,6 @@ public class GUI extends JFrame {
     private final JLabel mopLabel;
     private final JLabel riLabel;
     private final JLabel reLabel;
-    private final JLabel adressLabel;
 
     private final JLabel pcValueLabel;
     private final JLabel spValueLabel;
@@ -37,11 +40,11 @@ public class GUI extends JFrame {
     private final JLabel mopValueLabel;
     private final JLabel riValueLabel;
     private final JLabel reValueLabel;
-    private final JLabel adressValueLabel;
 
     private final JTextArea textArea;
     private final JScrollPane textAreaScrollPane;
     private int currentLine;
+    private String[] currentInstructions;
     private DefaultHighlighter highlighter;
     private DefaultHighlighter.DefaultHighlightPainter painter;
 
@@ -50,10 +53,13 @@ public class GUI extends JFrame {
 
     private final GroupLayout layout;
 
-    public GUI(Memory mem, Cpu cpu){
+    private final Timer timer;
+
+    public GUI(Memory mem, Cpu cpu, Loader loader){
 
         this.cpu = cpu;
         this.mem = mem;
+        this.loader = loader;
 
         pcLabel = new JLabel("PC: ");
         spLabel = new JLabel("SP: ");
@@ -61,23 +67,21 @@ public class GUI extends JFrame {
         mopLabel = new JLabel("MOP: ");
         riLabel = new JLabel("RI: ");
         reLabel = new JLabel("RE: ");
-        adressLabel = new JLabel("ADDRESS: ");
 
-        pcValueLabel = new JLabel("0");
-        spValueLabel = new JLabel("0");
-        accValueLabel = new JLabel("0");
-        mopValueLabel = new JLabel("0");
-        riValueLabel = new JLabel("0");
-        reValueLabel = new JLabel("0");
-        adressValueLabel = new JLabel("0");
+        pcValueLabel = new JLabel(cpu.getPc());
+        spValueLabel = new JLabel(cpu.getSp());
+        accValueLabel = new JLabel(cpu.getAcc());
+        mopValueLabel = new JLabel();
+        riValueLabel = new JLabel(cpu.getRi());
+        reValueLabel = new JLabel(cpu.getRe());
 
         textArea = new JTextArea();
         textArea.setLineWrap(true);
         textArea.setWrapStyleWord(true);
         highlighter = (DefaultHighlighter)textArea.getHighlighter();
-        highlighter.setDrawsLayeredHighlights(false);
         painter = new DefaultHighlighter.DefaultHighlightPainter( Color.YELLOW );
         currentLine = 0;
+        currentInstructions = new String[0];
 
         textAreaScrollPane = new JScrollPane(textArea,
                 ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
@@ -87,6 +91,9 @@ public class GUI extends JFrame {
         consoleArea = new JTextArea();
         consoleArea.setLineWrap(true);
         consoleArea.setWrapStyleWord(true);
+        consoleArea.setText("\t########## Console ##########\n");
+        consoleArea.setEditable(false);
+        cpu.setPipe(consoleArea);
 
         consoleAreaScrollPane = new JScrollPane(consoleArea,
                 ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
@@ -95,11 +102,17 @@ public class GUI extends JFrame {
 
         opModeComboBox = new JComboBox(opMode);
         opModeComboBox.setMaximumSize(opModeComboBox.getPreferredSize());
-        //opModeComboBox.addActionListener();
+        opModeComboBox.addActionListener(e -> opModeListener());
 
         runButton = new JButton();
         runButton.setText("Run");
-        runButton.addActionListener(e -> runButtonListener());
+        runButton.addActionListener(e -> {
+            try {
+                runButtonListener();
+            } catch (InterruptedException interruptedException) {
+                interruptedException.printStackTrace();
+            }
+        });
 
         cleanButton = new JButton();
         cleanButton.setText("Clean");
@@ -107,20 +120,32 @@ public class GUI extends JFrame {
 
         stepButton = new JButton();
         stepButton.setText("Step");
-        stepButton.addActionListener(e -> stepButtonListener());
+        opModeListener();
+        stepButton.addActionListener(e -> {
+            try {
+                runButtonListener();
+            } catch (InterruptedException interruptedException) {
+                interruptedException.printStackTrace();
+            }
+        });
 
-        String[][] list = new String[mem.getMem().size()][2];
+        memoryList = new String[mem.getMem().size()][2];
         String[] columnNames = {"Position", "Value"};
-        String[] memList = mem.getMem().toArray(new String[mem.getMem().size()]);
-        for (int i=0; i<mem.getMem().size(); i++) {
-            list[i][0] = Integer.toString(i+1);
-            list[i][1] = memList[i];
-        }
-        memoryTable = new JTable(list, columnNames);
-        memoryTable.setEnabled(false);
+        updateMemoryList();
+        memoryTable = new JTable(memoryList, columnNames);
         memoryTable.getColumnModel().getColumn(0).setPreferredWidth(10);
+        memoryTable.setEnabled(false);
         memoryScrollPane = new JScrollPane(memoryTable);
         memoryScrollPane.setMaximumSize(new Dimension(200, 700));
+
+        timer = new Timer(1000, e -> {
+            if (currentInstructions.length == 0) {
+                ((Timer) e.getSource()).stop();
+                runButton.setEnabled(true);
+                refresh();
+            }
+            stepButtonListener();
+        });
 
         layout = new GroupLayout(getContentPane());
         initComponents();
@@ -128,6 +153,8 @@ public class GUI extends JFrame {
     }
 
     private void initComponents() {
+
+        setDummyInstructions();
 
         getContentPane().setLayout(layout);
         getContentPane().setPreferredSize(new Dimension(800, 700));
@@ -176,10 +203,6 @@ public class GUI extends JFrame {
                                 .addComponent(reLabel)
                                 .addComponent(reValueLabel)
                                 .addGap(30))
-                        .addGroup(layout.createSequentialGroup()
-                                .addComponent(adressLabel)
-                                .addComponent(adressValueLabel)
-                                .addGap(30))
                         .addGap(70)
                         .addComponent(opModeComboBox)
                         .addGap(30)
@@ -224,10 +247,6 @@ public class GUI extends JFrame {
                                 .addComponent(reLabel)
                                 .addComponent(reValueLabel)
                                 .addGap(30))
-                        .addGroup(layout.createParallelGroup()
-                                .addComponent(adressLabel)
-                                .addComponent(adressValueLabel)
-                                .addGap(30))
                         .addGap(70)
                         .addComponent(opModeComboBox)
                         .addGap(30)
@@ -243,6 +262,19 @@ public class GUI extends JFrame {
     private void stepButtonListener() {
 
         try {
+            loader.loadAllWordsFromString(currentInstructions[0]);
+            try {
+                cpu.execute(mem);
+            } catch (Exception e) {
+                consoleArea.append("\n" + e.getMessage() + "\n");
+                timer.stop();
+                cleanButton.setEnabled(true);
+                if (opModeComboBox.getSelectedIndex() == 1) stepButton.setEnabled(false);
+                currentInstructions = new String[0];
+                return;
+            }
+            updateGUI();
+
             highlighter.removeAllHighlights();
             highlighter.addHighlight(
                     textArea.getLineStartOffset(currentLine),
@@ -253,16 +285,71 @@ public class GUI extends JFrame {
             badLocationException.printStackTrace();
         }
 
+        currentInstructions = Arrays.copyOfRange(currentInstructions, 1, currentInstructions.length);
+
     }
 
-    private void runButtonListener() {
+    private void runButtonListener() throws InterruptedException {
 
-        accValueLabel.setText(Integer.toString(cpu.getAcc()));
-        pcValueLabel.setText(Integer.toString(cpu.getPc()));
-        spValueLabel.setText(Integer.toString(cpu.getSp()));
+        if (textArea.getText().length() == 0) {
+            consoleArea.append("\nCan't run! Empty editor.\n");
+            return;
+        }
+
+        if (isSyntaxWrong()) {
+            consoleArea.append("\nCheck syntax! You can only insert binary code and the " +
+                    "instructions need to be one above the other, without spaces.\n");
+            return;
+        }
+
+        if (currentInstructions.length == 0) {
+            currentInstructions = textArea.getText().trim().split("\\r?\\n");
+            currentLine = 0;
+        }
+
+        if (!currentInstructions[currentInstructions.length-1].equals("0000000000001011")) {
+            System.out.println(currentInstructions[currentInstructions.length-1]);
+            consoleArea.append("\nSTOP instruction missing!\n");
+            return;
+        }
+
+        cleanButton.setEnabled(false);
+        opModeComboBox.setEnabled(false);
+        textArea.setEditable(false);
+        if (opModeComboBox.getSelectedIndex() == 0) runButton.setEnabled(false);
+
+        if (opModeComboBox.getSelectedIndex() == 0) {
+            timer.start();
+        } else {
+            if (currentInstructions.length == 0) refresh();
+            stepButtonListener();
+        }
+
+    }
+
+    private void updateGUI() {
+
+        updateMemoryList();
+        memoryTable.updateUI();
+        accValueLabel.setText(cpu.getAcc());
+        pcValueLabel.setText(cpu.getPc());
+        spValueLabel.setText(cpu.getSp());
         riValueLabel.setText(cpu.getRi());
         reValueLabel.setText(cpu.getRe());
-        memoryTable.updateUI();
+
+    }
+
+    private void refresh() {
+
+        cleanButton.setEnabled(true);
+        opModeComboBox.setEnabled(true);
+        opModeListener();
+        textArea.setEditable(true);
+
+        mem.init();
+        cpu.init();
+        loader.setPosition();
+        updateGUI();
 
     }
 
@@ -270,6 +357,60 @@ public class GUI extends JFrame {
 
         currentLine = 0;
         textArea.setText("");
+        consoleArea.setText("\t########## Console ##########\n");
+        refresh();
 
     }
+
+    private void opModeListener() {
+
+        if (opModeComboBox.getSelectedIndex() == 0) {
+
+            mopValueLabel.setText("00000000");
+            runButton.setEnabled(true);
+            stepButton.setEnabled(false);
+
+        } else {
+
+            mopValueLabel.setText("00000001");
+            runButton.setEnabled(false);
+            stepButton.setEnabled(true);
+
+        }
+
+    }
+
+    private void updateMemoryList() {
+
+        String[] valuesList = mem.getMem().toArray(new String[mem.getMem().size()]);
+        for (int i=0; i<mem.getMem().size(); i++) {
+            memoryList[i][0] = Integer.toString(i);
+            memoryList[i][1] = valuesList[i];
+        }
+
+    }
+
+    private boolean isSyntaxWrong() {
+
+        return !textArea.getText().trim().matches("[01\n]+");
+
+    }
+
+    // TEST PURPOSES
+    private void setDummyInstructions() {
+        textArea.setText("00000000010000100000000000001011\n");
+        textArea.append("00000000010011100000000000000100\n");
+        textArea.append("00000000000001110000000000011111\n");
+        textArea.append("00000000010001100000000000011110\n");
+        textArea.append("00000000000001110000000000101100\n");
+        textArea.append("00000000010000100000000000001010\n");
+        textArea.append("00000000000001110000000000011011\n");
+        textArea.append("00000000000001010000000000011011\n");
+        textArea.append("00000000000000010000000000011011\n");
+        textArea.append("00000000000001100000000000000010\n");
+        textArea.append("00000000000001110000000000011110\n");
+        textArea.append("000000000010110100000000001000000000000000011111\n");
+        textArea.append("0000000000001011\n");
+    }
+
 }
