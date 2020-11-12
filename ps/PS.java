@@ -10,20 +10,11 @@ public class PS {
        // Loader loader = new Loader("teste.txt", 13, mem);
        // loader.loadAllInstructions();
         Cpu cpu = new Cpu();
-        boolean signal = true;
+        boolean signal = true;  
+        while(signal){      
+            signal = cpu.execute(mem); 
+        }
 
-        try{
-            while(signal){      
-                signal = cpu.execute(mem); 
-                System.out.println("Acumulador: " + cpu.getAcc());
-                System.out.println("Memoria 44:" +mem.getData(44));
-                System.out.println("Memoria 31:" +mem.getData(31));
-                System.out.println("Memoria 32:" +mem.getData(32));
-            }
-        }
-        catch(IllegalArgumentException e) {
-            System.out.println("\nErro! Tentativa de acessar a memória de instruções.");
-        }
             /*EventQueue.invokeLater(new Runnable() {
                 @Override
                 public void run() {
