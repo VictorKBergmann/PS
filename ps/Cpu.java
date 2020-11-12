@@ -1,5 +1,4 @@
 
-
 package ps;
 
 public class Cpu {
@@ -63,7 +62,7 @@ public class Cpu {
                     re = mem.getData(Integer.parseInt(re, 2));
                 }
                                            //caso não for, faz como direto
-                pc = mem.getInstruction(Integer.parseInt(re, 2)); 
+                pc = mem.getData(Integer.parseInt(re, 2)); 
                 pointerDecrement(pc); //atualiza pra pos. anterior a desejada, já que o pc att no final tbm
                 break;
 
@@ -74,7 +73,7 @@ public class Cpu {
                     if (ri.substring(9, 12).equals("001")) {
                         re = mem.getData(Integer.parseInt(re, 2));
                     }
-                    pc = mem.getInstruction(Integer.parseInt(re, 2));
+                    pc = mem.getData(Integer.parseInt(re, 2));
                     pointerDecrement(pc);
                 }
                 break;
@@ -116,7 +115,7 @@ public class Cpu {
                     if (ri.substring(9, 12).equals("001")) {
                         re = mem.getData(Integer.parseInt(re, 2));
                     }
-                    pc = mem.getInstruction(Integer.parseInt(re, 2));
+                    pc = mem.getData(Integer.parseInt(re, 2));
                     pc = pointerDecrement(pc);
                 }
                 break;
@@ -128,7 +127,7 @@ public class Cpu {
                     if (ri.substring(9, 12).equals("001")) {
                         re = mem.getData(Integer.parseInt(re, 2));
                     }
-                    pc = mem.getInstruction(Integer.parseInt(re, 2));
+                    pc = mem.getData(Integer.parseInt(re, 2));
                    pc = pointerDecrement(pc);
                 }
                 break;
@@ -261,7 +260,10 @@ public class Cpu {
                 pc = pointerDecrement(pc);
                 break;
 
-            case "1001": //RET                                                             
+            case "1001": //RET
+                if(Integer.parseInt(sp, 2) == 0) {
+                    throw new IllegalArgumentException("Pilha vazia"); //se não tiver nada na pilha e tentar dar RET, lança a exception
+                }
                 pc = mem.getDataStack(Integer.parseInt(sp, 2)); //faz um pop
                 sp = pointerDecrement(sp);
                 break;
