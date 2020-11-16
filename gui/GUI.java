@@ -41,6 +41,10 @@ public class GUI extends JFrame {
     private final JLabel riValueLabel;
     private final JLabel reValueLabel;
 
+    //private final JLabel inputLabel;
+    //private final JTextField inputTextField;
+    private final JOptionPane inputDialog;
+
     private final JTextArea textArea;
     private final JScrollPane textAreaScrollPane;
     private int currentLine;
@@ -75,6 +79,13 @@ public class GUI extends JFrame {
         riValueLabel = new JLabel(cpu.getRi());
         reValueLabel = new JLabel(cpu.getRe());
 
+        //inputLabel = new JLabel("Input:");
+        //inputTextField = new JTextField();
+        inputDialog = new JOptionPane();
+        inputDialog.setSize(new Dimension(100, 100));
+        inputDialog.setVisible(true);
+        //cpu.setUserInput(inputDialog);
+
         textArea = new JTextArea();
         textArea.setLineWrap(true);
         textArea.setWrapStyleWord(true);
@@ -93,7 +104,7 @@ public class GUI extends JFrame {
         consoleArea.setWrapStyleWord(true);
         consoleArea.setText("\t########## Console ##########\n");
         consoleArea.setEditable(false);
-        cpu.setPipe(consoleArea);
+        cpu.setUserOutput(consoleArea);
 
         consoleAreaScrollPane = new JScrollPane(consoleArea,
                 ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
@@ -139,12 +150,12 @@ public class GUI extends JFrame {
         memoryScrollPane.setMaximumSize(new Dimension(200, 700));
 
         timer = new Timer(1000, e -> {
+            stepButtonListener();
             if (currentInstructions.length == 0) {
                 ((Timer) e.getSource()).stop();
                 runButton.setEnabled(true);
                 refresh();
             }
-            stepButtonListener();
         });
 
         layout = new GroupLayout(getContentPane());
@@ -176,6 +187,9 @@ public class GUI extends JFrame {
         return layout.createSequentialGroup()
                 .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
                         .addComponent(textAreaScrollPane)
+                        //.addGroup(layout.createSequentialGroup()
+                                //.addComponent(inputLabel)
+                                //.addComponent(inputTextField))
                         .addComponent(consoleAreaScrollPane))
                 .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
                         .addGap(200)
@@ -220,6 +234,9 @@ public class GUI extends JFrame {
         return layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
                 .addGroup(layout.createSequentialGroup()
                         .addComponent(textAreaScrollPane)
+                        //.addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
+                                //.addComponent(inputLabel)
+                                //.addComponent(inputTextField))
                         .addComponent(consoleAreaScrollPane))
                 .addGroup(layout.createSequentialGroup()
                         .addGap(200)
@@ -267,7 +284,7 @@ public class GUI extends JFrame {
                 cpu.execute(mem);
             } catch (Exception e) {
                 consoleArea.append("\n" + e.getMessage() + "\n");
-                timer.stop();
+                if (opModeComboBox.getSelectedIndex() == 0) timer.stop();
                 cleanButton.setEnabled(true);
                 if (opModeComboBox.getSelectedIndex() == 1) stepButton.setEnabled(false);
                 currentInstructions = new String[0];
@@ -321,8 +338,8 @@ public class GUI extends JFrame {
         if (opModeComboBox.getSelectedIndex() == 0) {
             timer.start();
         } else {
-            if (currentInstructions.length == 0) refresh();
             stepButtonListener();
+            if (currentInstructions.length == 0) refresh();
         }
 
     }

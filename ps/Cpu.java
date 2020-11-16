@@ -1,12 +1,12 @@
 
 package ps;
 
-
 import javax.swing.*;
 
 public class Cpu {
     private String ri, re, pc, sp, acc;
-    private JTextArea pipe;
+    private JTextArea userOutput;
+    private JOptionPane userInput;
 
     public Cpu() {
         init();
@@ -22,8 +22,12 @@ public class Cpu {
             
     public String getSp() { return sp; }
 
-    public void setPipe(JTextArea pipe) {
-        this.pipe = pipe;
+    public void setUserOutput(JTextArea userOutput) {
+        this.userOutput = userOutput;
+    }
+
+    public void setUserInput(JOptionPane userInput) {
+        this.userInput = userInput;
     }
 
     public String read(Memory mem) { return mem.getInstruction(Integer.parseInt(pc, 2)); }
@@ -174,6 +178,7 @@ public class Cpu {
             case "1000": //WRITE
                 pc = pointerIncrement(pc);
                 value = mem.getInstruction(Integer.parseInt(pc, 2));
+                userOutput.append("\nOutput: " + value + "\n");
                 if (ri.substring(9, 12).equals("001")) {
                     re = mem.getData(Integer.parseInt(value, 2));
                     value = mem.getData(Integer.parseInt(re, 2));
@@ -207,14 +212,17 @@ public class Cpu {
                 return false;
 
             case "1100": //READ
-                String input = null;
-                //interface
+//                String input = userInput.showInputDialog(
+//                        userOutput.getParent(),
+//                        "Input:",
+//                        "READ instruction found",
+//                        JOptionPane.OK_OPTION);
                 pc = pointerIncrement(pc);
                 re = mem.getInstruction(Integer.parseInt(pc, 2));
                 if (ri.substring(9, 12).equals("001")) {
                     re = mem.getData(Integer.parseInt(re, 2));
                 }
-                 mem.setData(Integer.parseInt(re,2), input);
+                 //mem.setData(Integer.parseInt(re,2), input);
                 break;
 
             case "1101": //COPY
