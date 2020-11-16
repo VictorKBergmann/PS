@@ -1,12 +1,12 @@
 
 package ps;
 
+
 import javax.swing.*;
 
 public class Cpu {
     private String ri, re, pc, sp, acc;
-    private JTextArea userOutput;
-    private JOptionPane userInput;
+    private JTextArea pipe;
 
     public Cpu() {
         init();
@@ -22,12 +22,8 @@ public class Cpu {
             
     public String getSp() { return sp; }
 
-    public void setUserOutput(JTextArea userOutput) {
-        this.userOutput = userOutput;
-    }
-
-    public void setUserInput(JOptionPane userInput) {
-        this.userInput = userInput;
+    public void setPipe(JTextArea pipe) {
+        this.pipe = pipe;
     }
 
     public String read(Memory mem) { return mem.getInstruction(Integer.parseInt(pc, 2)); }
@@ -68,7 +64,7 @@ public class Cpu {
     public boolean execute(Memory mem) throws IllegalArgumentException {
         ri = read(mem);
         re = "0000000000000000";
-        String value;
+        String value;  //pega os valores na memória de dados
         int operation;
 
         switch (ri.substring(12, 16)) {
@@ -79,8 +75,9 @@ public class Cpu {
                 {
                     re = mem.getData(Integer.parseInt(re, 2));
                 }
-                                           //caso não for, faz como direto
-                pc = mem.getData(Integer.parseInt(re, 2)); 
+                //caso não for, faz como direto
+                // pc = mem.getData(Integer.parseInt(re, 2)); jeito antigo
+                pc = re;
                 pointerDecrement(pc); //atualiza pra pos. anterior a desejada, já que o pc att no final tbm
                 break;
 
@@ -91,7 +88,7 @@ public class Cpu {
                     if (ri.substring(9, 12).equals("001")) {
                         re = mem.getData(Integer.parseInt(re, 2));
                     }
-                    pc = mem.getData(Integer.parseInt(re, 2));
+                    pc = re;
                     pointerDecrement(pc);
                 }
                 break;
@@ -133,7 +130,7 @@ public class Cpu {
                     if (ri.substring(9, 12).equals("001")) {
                         re = mem.getData(Integer.parseInt(re, 2));
                     }
-                    pc = mem.getData(Integer.parseInt(re, 2));
+                    pc = re;
                     pc = pointerDecrement(pc);
                 }
                 break;
@@ -145,7 +142,7 @@ public class Cpu {
                     if (ri.substring(9, 12).equals("001")) {
                         re = mem.getData(Integer.parseInt(re, 2));
                     }
-                    pc = mem.getData(Integer.parseInt(re, 2));
+                   pc = re;
                    pc = pointerDecrement(pc);
                 }
                 break;
@@ -178,7 +175,6 @@ public class Cpu {
             case "1000": //WRITE
                 pc = pointerIncrement(pc);
                 value = mem.getInstruction(Integer.parseInt(pc, 2));
-                userOutput.append("\nOutput: " + value + "\n");
                 if (ri.substring(9, 12).equals("001")) {
                     re = mem.getData(Integer.parseInt(value, 2));
                     value = mem.getData(Integer.parseInt(re, 2));
@@ -187,6 +183,7 @@ public class Cpu {
                     re = value;
                     value = mem.getData(Integer.parseInt(re, 2));
                 }
+                // printa o value na interface aqui
                 break;
 
             case "1010": //DIVIDE
@@ -212,32 +209,26 @@ public class Cpu {
                 return false;
 
             case "1100": //READ
-//                String input = userInput.showInputDialog(
-//                        userOutput.getParent(),
-//                        "Input:",
-//                        "READ instruction found",
-//                        JOptionPane.OK_OPTION);
+                String input = null;
+                //interface
                 pc = pointerIncrement(pc);
                 re = mem.getInstruction(Integer.parseInt(pc, 2));
                 if (ri.substring(9, 12).equals("001")) {
                     re = mem.getData(Integer.parseInt(re, 2));
                 }
-                 //mem.setData(Integer.parseInt(re,2), input);
+                 mem.setData(Integer.parseInt(re,2), input);
                 break;
 
             case "1101": //COPY
                 String temp;
                 pc = pointerIncrement(pc);
-                value = mem.getInstruction(Integer.parseInt(pc, 2));
+                re = mem.getInstruction(Integer.parseInt(pc, 2));  //pega primeiro operando
                 if (ri.substring(9, 12).equals("001") || ri.substring(9, 12).equals("011") || ri.substring(9, 12).equals("101")) {
-                    re = mem.getData(Integer.parseInt(value, 2));
-                    value = re;
+                    re = mem.getData(Integer.parseInt(re, 2));    
                 }
-                if (ri.substring(9, 12).equals("100")) {
-                    re = value;
-                }
+                value = re;
                 pc = pointerIncrement(pc);
-                temp = mem.getInstruction(Integer.parseInt(pc, 2));
+                temp = mem.getInstruction(Integer.parseInt(pc, 2)); //pega segundo operando
                 if (ri.substring(9, 12).equals("010") || ri.substring(9, 12).equals("011")){
                     re = mem.getData(Integer.parseInt(temp, 2));
                      temp = mem.getData(Integer.parseInt(re, 2));
@@ -268,16 +259,16 @@ public class Cpu {
             case "1111": //CALL
                 pc = pointerIncrement(pc);
                 re = mem.getInstruction(Integer.parseInt(pc, 2));
-                if (ri.substring(9, 12).equals("001")) {
-                    re = mem.getData(Integer.parseInt(re, 2));
-                }
                 if (Integer.parseInt(sp, 2) == 10) {
                     sp = "0000000000000000";
                     throw new IllegalArgumentException("Stack Overflow");  //se tentar colocar mais alguma coisa na pilha e ela já tiver cheia, aponta para a base e lança a exception
                 }
+                if (ri.substring(9, 12).equals("001")) {
+                    re = mem.getData(Integer.parseInt(re, 2));
+                }
                 sp = pointerIncrement(sp);
                 mem.setDataStack(Integer.parseInt(sp, 2), pc);
-                pc = mem.getInstruction(Integer.parseInt(re, 2));  //mesmo esquema dos branch
+                pc = re;  //mesmo esquema dos branch
                 pc = pointerDecrement(pc);
                 break;
 
@@ -291,6 +282,5 @@ public class Cpu {
         }
         pc = pointerIncrement(pc);
         return true;
-    }
-    
+    }   
 }
