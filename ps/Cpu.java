@@ -6,7 +6,8 @@ import javax.swing.*;
 
 public class Cpu {
     private String ri, re, pc, sp, acc;
-    private JTextArea pipe;
+    private JTextArea out;
+    private JOptionPane in;
 
     public Cpu() {
         init();
@@ -22,8 +23,12 @@ public class Cpu {
             
     public String getSp() { return sp; }
 
-    public void setPipe(JTextArea pipe) {
-        this.pipe = pipe;
+    public void setUserOutput(JTextArea out) {
+        this.out = out;
+    }
+
+    public void setUserInput(JOptionPane in) {
+        this.in = in;
     }
 
     public String read(Memory mem) { return mem.getInstruction(Integer.parseInt(pc, 2)); }
@@ -183,7 +188,7 @@ public class Cpu {
                     re = value;
                     value = mem.getData(Integer.parseInt(re, 2));
                 }
-                // printa o value na interface aqui
+                out.append("\nOutput: " + value + "\n");
                 break;
 
             case "1010": //DIVIDE
@@ -210,7 +215,7 @@ public class Cpu {
 
             case "1100": //READ
                 String input = null;
-                //interface
+                // usar JOptionPane in.createDialog() aqui
                 pc = pointerIncrement(pc);
                 re = mem.getInstruction(Integer.parseInt(pc, 2));
                 if (ri.substring(9, 12).equals("001")) {

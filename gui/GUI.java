@@ -84,7 +84,7 @@ public class GUI extends JFrame {
         inputDialog = new JOptionPane();
         inputDialog.setSize(new Dimension(100, 100));
         inputDialog.setVisible(true);
-        //cpu.setUserInput(inputDialog);
+        cpu.setUserInput(inputDialog);
 
         textArea = new JTextArea();
         textArea.setLineWrap(true);
