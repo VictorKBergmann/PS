@@ -83,7 +83,7 @@ public class Cpu {
                 //caso não for, faz como direto
                 // pc = mem.getData(Integer.parseInt(re, 2)); jeito antigo
                 pc = re;
-                pointerDecrement(pc); //atualiza pra pos. anterior a desejada, já que o pc att no final tbm
+                pc = pointerDecrement(pc); //atualiza pra pos. anterior a desejada, já que o pc att no final tbm
                 break;
 
             case "0001": //BRPOS
@@ -94,7 +94,7 @@ public class Cpu {
                         re = mem.getData(Integer.parseInt(re, 2));
                     }
                     pc = re;
-                    pointerDecrement(pc);
+                    pc = pointerDecrement(pc);
                 }
                 break;
 
