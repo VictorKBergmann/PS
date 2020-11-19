@@ -8,7 +8,7 @@ import javax.swing.*;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultHighlighter;
 import java.awt.*;
-import java.util.Arrays;
+import java.util.HashMap;
 
 public class GUI extends JFrame {
 
@@ -27,6 +27,13 @@ public class GUI extends JFrame {
     private final JButton cleanButton;
     private final JButton stepButton;
 
+    private final JLabel inputLabel;
+    private final JPanel inputPanel;
+    private final JLabel memoryLabel;
+    private final JPanel memoryPanel;
+    private final JLabel outputLabel;
+    private final JPanel outputPanel;
+
     private final JLabel pcLabel;
     private final JLabel spLabel;
     private final JLabel accLabel;
@@ -41,8 +48,6 @@ public class GUI extends JFrame {
     private final JLabel riValueLabel;
     private final JLabel reValueLabel;
 
-    //private final JLabel inputLabel;
-    //private final JTextField inputTextField;
     private final JOptionPane inputDialog;
 
     private final JTextArea textArea;
@@ -59,11 +64,31 @@ public class GUI extends JFrame {
 
     private final Timer timer;
 
+    private final HashMap<String, Integer> currentLineMap;
+    private boolean isLoading;
+
     public GUI(Memory mem, Cpu cpu, Loader loader){
 
         this.cpu = cpu;
         this.mem = mem;
         this.loader = loader;
+
+        inputLabel = new JLabel("INPUT", JLabel.CENTER);
+        inputPanel = new JPanel();
+        inputPanel.setMaximumSize(new Dimension(400, 2));
+        inputPanel.add(inputLabel);
+        memoryLabel = new JLabel("MEMORY", JLabel.CENTER);
+        memoryPanel = new JPanel();
+        memoryPanel.setMaximumSize(new Dimension(200, 2));
+        memoryPanel.add(memoryLabel);
+        outputLabel = new JLabel("OUTPUT", JLabel.CENTER);
+        outputPanel = new JPanel();
+        outputPanel.setMaximumSize(new Dimension(400, 2));
+        outputPanel.add(outputLabel);
+
+        currentLineMap = new HashMap<>();
+        currentLine = 0;
+        isLoading = true;
 
         pcLabel = new JLabel("PC: ");
         spLabel = new JLabel("SP: ");
@@ -79,8 +104,6 @@ public class GUI extends JFrame {
         riValueLabel = new JLabel(cpu.getRi());
         reValueLabel = new JLabel(cpu.getRe());
 
-        //inputLabel = new JLabel("Input:");
-        //inputTextField = new JTextField();
         inputDialog = new JOptionPane();
         inputDialog.setSize(new Dimension(100, 100));
         inputDialog.setVisible(true);
@@ -91,7 +114,6 @@ public class GUI extends JFrame {
         textArea.setWrapStyleWord(true);
         highlighter = (DefaultHighlighter)textArea.getHighlighter();
         painter = new DefaultHighlighter.DefaultHighlightPainter( Color.YELLOW );
-        currentLine = 0;
         currentInstructions = new String[0];
 
         textAreaScrollPane = new JScrollPane(textArea,
@@ -102,7 +124,6 @@ public class GUI extends JFrame {
         consoleArea = new JTextArea();
         consoleArea.setLineWrap(true);
         consoleArea.setWrapStyleWord(true);
-        consoleArea.setText("\t########## Console ##########\n");
         consoleArea.setEditable(false);
         cpu.setUserOutput(consoleArea);
 
@@ -151,11 +172,6 @@ public class GUI extends JFrame {
 
         timer = new Timer(1000, e -> {
             stepButtonListener();
-            if (currentInstructions.length == 0) {
-                ((Timer) e.getSource()).stop();
-                runButton.setEnabled(true);
-                refresh();
-            }
         });
 
         layout = new GroupLayout(getContentPane());
@@ -186,10 +202,9 @@ public class GUI extends JFrame {
 
         return layout.createSequentialGroup()
                 .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                        .addComponent(inputPanel)
                         .addComponent(textAreaScrollPane)
-                        //.addGroup(layout.createSequentialGroup()
-                                //.addComponent(inputLabel)
-                                //.addComponent(inputTextField))
+                        .addComponent(outputPanel)
                         .addComponent(consoleAreaScrollPane))
                 .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
                         .addGap(200)
@@ -225,7 +240,9 @@ public class GUI extends JFrame {
                         .addComponent(cleanButton)
                         .addGap(30)
                         .addComponent(stepButton))
-                .addComponent(memoryScrollPane);
+                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                        .addComponent(memoryPanel)
+                        .addComponent(memoryScrollPane));
 
     }
 
@@ -233,10 +250,9 @@ public class GUI extends JFrame {
 
         return layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
                 .addGroup(layout.createSequentialGroup()
+                        .addComponent(inputPanel)
                         .addComponent(textAreaScrollPane)
-                        //.addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
-                                //.addComponent(inputLabel)
-                                //.addComponent(inputTextField))
+                        .addComponent(outputPanel)
                         .addComponent(consoleAreaScrollPane))
                 .addGroup(layout.createSequentialGroup()
                         .addGap(200)
@@ -272,37 +288,35 @@ public class GUI extends JFrame {
                         .addComponent(cleanButton)
                         .addGap(30)
                         .addComponent(stepButton))
-                .addComponent(memoryScrollPane);
+                .addGroup(layout.createSequentialGroup()
+                        .addComponent(memoryPanel)
+                        .addComponent(memoryScrollPane));
+
 
     }
 
     private void stepButtonListener() {
 
-        try {
-            loader.loadAllWordsFromString(currentInstructions[0]);
-            try {
-                cpu.execute(mem);
-            } catch (Exception e) {
-                consoleArea.append("\n" + e.getMessage() + "\n");
-                if (opModeComboBox.getSelectedIndex() == 0) timer.stop();
-                cleanButton.setEnabled(true);
-                if (opModeComboBox.getSelectedIndex() == 1) stepButton.setEnabled(false);
-                currentInstructions = new String[0];
-                return;
-            }
-            updateGUI();
+        highlight();
 
-            highlighter.removeAllHighlights();
-            highlighter.addHighlight(
-                    textArea.getLineStartOffset(currentLine),
-                    textArea.getLineEndOffset(currentLine),
-                    painter);
-            currentLine++;
-        } catch (BadLocationException badLocationException) {
-            badLocationException.printStackTrace();
+        try {
+            cpu.execute(mem);
+        } catch (Exception e) {
+            consoleArea.append("\n" + e.getMessage() + "\n");
+            if (opModeComboBox.getSelectedIndex() == 0) {
+                runButton.setEnabled(true);
+                timer.stop();
+            }
+            opModeComboBox.setEnabled(true);
+            isLoading = true;
+            currentInstructions = new String[0];
+            cleanButton.setEnabled(true);
+            return;
         }
 
-        currentInstructions = Arrays.copyOfRange(currentInstructions, 1, currentInstructions.length);
+        updateGUI();
+
+        currentLine = currentLineMap.get(cpu.getPc());
 
     }
 
@@ -314,32 +328,50 @@ public class GUI extends JFrame {
         }
 
         if (isSyntaxWrong()) {
-            consoleArea.append("\nCheck syntax! You can only insert binary code and the " +
-                    "instructions need to be one above the other, without spaces.\n");
+            consoleArea.append("\nCheck syntax! Only binary code allowed.\n");
             return;
         }
 
-        if (currentInstructions.length == 0) {
+
+        if (currentInstructions.length == 0)
             currentInstructions = textArea.getText().trim().split("\\r?\\n");
-            currentLine = 0;
-        }
+
 
         if (!currentInstructions[currentInstructions.length-1].equals("0000000000001011")) {
-            System.out.println(currentInstructions[currentInstructions.length-1]);
             consoleArea.append("\nSTOP instruction missing!\n");
+            currentInstructions = new String[0];
             return;
+        }
+
+        if (isLoading) {
+            refresh();
+            fillCurrentLineMap();
         }
 
         cleanButton.setEnabled(false);
         opModeComboBox.setEnabled(false);
         textArea.setEditable(false);
+
         if (opModeComboBox.getSelectedIndex() == 0) runButton.setEnabled(false);
 
         if (opModeComboBox.getSelectedIndex() == 0) {
             timer.start();
         } else {
             stepButtonListener();
-            if (currentInstructions.length == 0) refresh();
+        }
+
+    }
+
+    private void highlight() {
+
+        highlighter.removeAllHighlights();
+        try {
+            highlighter.addHighlight(
+                    textArea.getLineStartOffset(currentLine),
+                    textArea.getLineEndOffset(currentLine),
+                    painter);
+        } catch (BadLocationException e) {
+            e.printStackTrace();
         }
 
     }
@@ -363,6 +395,10 @@ public class GUI extends JFrame {
         opModeListener();
         textArea.setEditable(true);
 
+        if (!currentLineMap.isEmpty()) currentLineMap.clear();
+        currentLine = 0;
+        isLoading = true;
+
         mem.init();
         cpu.init();
         loader.setPosition();
@@ -374,7 +410,6 @@ public class GUI extends JFrame {
 
         currentLine = 0;
         textArea.setText("");
-        consoleArea.setText("\t########## Console ##########\n");
         refresh();
 
     }
@@ -413,9 +448,48 @@ public class GUI extends JFrame {
 
     }
 
+    private String bitsPadding(Integer pc) {
+        String temp2 = Integer.toString(pc,2);
+        String temp1 = "";
+        for (int i=16; i > temp2.length(); i--) {
+            temp1 += "0";
+        }
+        return temp1.concat(temp2);
+    }
+
+    private void fillCurrentLineMap() {
+
+        Integer pc = 13;
+        Integer line = 0;
+
+        for(String instruction : currentInstructions) {
+            loader.loadAllWordsFromString(instruction);
+            currentLineMap.put(bitsPadding(pc), line);
+            switch (instruction.length()) {
+                case 16:
+                    pc += 1;
+                    break;
+                case 32:
+                    pc += 2;
+                    break;
+                case 48:
+                    pc += 3;
+                    break;
+            }
+            line++;
+        }
+        isLoading = false;
+    }
+
     // TEST PURPOSES
     private void setDummyInstructions() {
-        textArea.setText("00000000010000100000000000001011\n");
+        textArea.setText("00000000010000100000000000000111\n");
+        textArea.append("00000000000001000000000000010101\n");
+        textArea.append("00000000010001100000000000000001\n");
+        textArea.append("00000000000000000000000000001111\n");
+        textArea.append("00000000010000100000000000001111\n");
+        textArea.append("0000000000001011\n");
+        /*textArea.setText("00000000010000100000000000001011\n");
         textArea.append("00000000010011100000000000000100\n");
         textArea.append("00000000000001110000000000011111\n");
         textArea.append("00000000010001100000000000011110\n");
@@ -427,7 +501,7 @@ public class GUI extends JFrame {
         textArea.append("00000000000001100000000000000010\n");
         textArea.append("00000000000001110000000000011110\n");
         textArea.append("000000000010110100000000001000000000000000011111\n");
-        textArea.append("0000000000001011\n");
+        textArea.append("0000000000001011\n");*/
     }
 
 }

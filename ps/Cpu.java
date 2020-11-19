@@ -169,6 +169,7 @@ public class Cpu {
                 break;
                 
             case "0111": //STORE
+                System.out.println("TO AQUI CARAI");
                 pc = pointerIncrement(pc);
                 re = mem.getInstruction(Integer.parseInt(pc, 2));
                 if (ri.substring(9, 12).equals("001")) {
@@ -211,11 +212,10 @@ public class Cpu {
                 break;
 
             case "1011": //STOP                
-                return false;
+                throw new IllegalArgumentException("END OF EXECUTION");
 
             case "1100": //READ
                 String input = null;
-                // usar JOptionPane in.createDialog() aqui
                 pc = pointerIncrement(pc);
                 re = mem.getInstruction(Integer.parseInt(pc, 2));
                 if (ri.substring(9, 12).equals("001")) {
