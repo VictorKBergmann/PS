@@ -28,7 +28,7 @@ public class Memory {
     
     public void setData(int position, String data) {
         if (position < dataPointer){
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException("Erro! Tentativa de acessar a memória de instruções.");
         }
         mem.set(position, data);
     }
