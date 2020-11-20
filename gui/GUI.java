@@ -568,9 +568,15 @@ public class GUI extends JFrame {
             loader.loadAllWordsFromString(instruction);
             currentLineMap.put(bitsPadding(pc), line);
             switch (instruction.length()) {
-                case 16 -> pc += 1;
-                case 32 -> pc += 2;
-                case 48 -> pc += 3;
+                case 16:
+                    pc += 1;
+                    break;
+                case 32:
+                    pc += 2;
+                    break;
+                case 48:
+                    pc += 3;
+                    break;
             }
             line++;
         }
@@ -579,7 +585,8 @@ public class GUI extends JFrame {
 
     // TEST PURPOSES
     private void setDummyInstructions() {
-        textArea.setText("00000000010000100000000000000111\n");
+        textArea.setText("00000000000011000000000000000111\n");
+        //textArea.setText("00000000010000100000000000000111\n");
         textArea.append("00000000000001000000000000010101\n");
         textArea.append("00000000010001100000000000000001\n");
         textArea.append("00000000000000000000000000001111\n");

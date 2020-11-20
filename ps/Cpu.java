@@ -215,7 +215,22 @@ public class Cpu {
                 throw new IllegalArgumentException("END OF EXECUTION");
 
             case "1100": //READ
-                String input = null;
+                boolean flagzin = true;
+                String input;
+                do {
+                    input = JOptionPane.showInputDialog("Digite o número em binário (16 bits):");
+                    if(input == null) {
+                        throw new IllegalArgumentException("Execução cancelada pelo usuário!");
+                    }
+                    if(!input.matches("[0-1]+")) {
+                        JOptionPane.showMessageDialog(null, "Input deve conter somente 0's e 1's! Tente novamente.");
+                    }
+                    if(input.length() != 16) {
+                        JOptionPane.showMessageDialog(null, "Input deve conter 16 números! Tente novamente.");
+                    }
+                    if(input.matches("[0-1]+") && input.length() == 16) { flagzin = false; }
+                } while (flagzin);
+                System.out.println(input);
                 pc = pointerIncrement(pc);
                 re = mem.getInstruction(Integer.parseInt(pc, 2));
                 if (ri.substring(9, 12).equals("001")) {
