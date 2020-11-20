@@ -5,6 +5,8 @@ import ps.Loader;
 import ps.Memory;
 
 import javax.swing.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.plaf.basic.BasicArrowButton;
 import javax.swing.plaf.basic.BasicScrollBarUI;
 import javax.swing.text.BadLocationException;
@@ -15,30 +17,40 @@ import java.util.HashMap;
 
 public class GUI extends JFrame {
 
-    private final Memory mem;
-    private final Cpu cpu;
-    private final Loader loader;
+    private final Memory mem; /** Used to keep user instructions and data. */
+    private final Cpu cpu; /** Used to run user instructions. */
+    private final Loader loader; /** Used to load user instructions. */
 
     JMenuBar menuBar;
-    JMenu examples;
-    JButton help;
-    JOptionPane helpDialog;
-    JRadioButtonMenuItem continuousOp;
-    JRadioButtonMenuItem debugOp;
-    ButtonGroup operation;
+    JMenu examples; /** Used to select default examples. */
+    JButton help; /** Button used to show help dialog */
+    JOptionPane helpDialog; /** Used to call help dialog */
+    JRadioButtonMenuItem continuousOp; /** Radio button representing run op mode */
+    JRadioButtonMenuItem debugOp; /** Radio button representing debug op mode */
+    JSlider slider; /** Used to increase/decrease execution speed */
+    ButtonGroup operation; /** Used to group both radio buttons */
 
-    private final JTable memoryTable;
-    private String[][] memoryList;
-    private final JScrollPane memoryScrollPane;
+    private final JTable memoryTable; /** Shows memory as a table */
+    private String[][] memoryList; /** Keeps memory positions and values */
+    private final JScrollPane memoryScrollPane; /** Allows memory list to be scrolled. */
 
+    /**
+     * User action buttons
+     */
     private final JButton runButton;
     private final JButton cleanButton;
     private final JButton stepButton;
 
+    /**
+     * Panels used to centralize text
+     */
     private final JPanel inputPanel;
     private final JPanel memoryPanel;
     private final JPanel outputPanel;
 
+    /**
+     * Registers label
+     */
     private final JLabel pcLabel;
     private final JLabel spLabel;
     private final JLabel accLabel;
@@ -46,6 +58,9 @@ public class GUI extends JFrame {
     private final JLabel riLabel;
     private final JLabel reLabel;
 
+    /**
+     * Registers current value
+     */
     private final JLabel pcValueLabel;
     private final JLabel spValueLabel;
     private final JLabel accValueLabel;
@@ -53,38 +68,61 @@ public class GUI extends JFrame {
     private final JLabel riValueLabel;
     private final JLabel reValueLabel;
 
-    private final JTextArea textArea;
-    private final JScrollPane textAreaScrollPane;
-    private int currentLine;
-    private String[] currentInstructions;
+    private final JTextArea textArea; /** Area where user writes its instructions */
+    private final JScrollPane textAreaScrollPane; /** Allows editor to be scrolled. */
+    private int currentLine; /** Used to define a highlight at the current instruction line. */
+    private String[] currentInstructions; /** Used to know how many instructions will be executed. */
+
+    /**
+     * Execution highlighter
+     */
     private final DefaultHighlighter highlighter;
     private final DefaultHighlighter.DefaultHighlightPainter executionColor;
     private final DefaultHighlighter.DefaultHighlightPainter errorColor;
 
-    private final JTextArea consoleArea;
-    private final JScrollPane consoleAreaScrollPane;
+    private final JTextArea consoleArea; /** Text area to show error messages and outputs. */
+    private final JScrollPane consoleAreaScrollPane; /** Allow console output to be scrolled. */
 
-    private final GroupLayout layout;
+    private final GroupLayout layout; /** Used to create an interface custom layout. */
 
-    private final Timer timer;
+    private final Timer timer; /** Used to set a delay between executions (RUN MODE). */
 
-    private final HashMap<String, Integer> currentLineMap;
-    private boolean isLoading;
+    private final HashMap<String, Integer> currentLineMap; /** Keeps index of each line and its instruction. */
+    private boolean isLoading; /** Used to know if instructions are already loaded in memory. */
 
     public GUI(Memory mem, Cpu cpu, Loader loader){
 
+        /**
+         * Starts menu bar and change its design
+         */
         menuBar = new JMenuBar();
         menuBar.setBackground(Color.LIGHT_GRAY);
         menuBar.setBorder(BorderFactory.createEmptyBorder());
 
+        /**
+         * Starts slider and define available execution speeds
+         */
+        slider = new JSlider(JSlider.HORIZONTAL, 100, 1000, 1000);
+        slider.setBackground(Color.LIGHT_GRAY);
+        slider.setForeground(Color.BLACK);
+        slider.setMajorTickSpacing(100);
+        slider.setPaintTicks(true);
+        slider.addChangeListener((ChangeEvent l) -> changeDelay());
+
+        /**
+         * Creates a list of default examples inside the menu bar
+         */
         examples = new JMenu("Examples");
         examples.setForeground(Color.DARK_GRAY);
-        for (int i = 1; i <= 1; i++) {
+        for (int i = 1; i <= 2; i++) {
             JMenuItem exampleItem = new JMenuItem("Example #" + i);
             exampleItem.addActionListener(e -> setExampleChosen(exampleItem.getText().split("#")[1]));
             examples.add(exampleItem);
         }
 
+        /**
+         * Starts help button and define a default message at Util class
+         */
         help = new JButton("Help");
         help.setBackground(Color.LIGHT_GRAY);
         help.setForeground(Color.DARK_GRAY);
@@ -93,6 +131,9 @@ public class GUI extends JFrame {
         help.addActionListener(e -> helpDialog.showMessageDialog(null, Util.getHelp()));
         helpDialog = new JOptionPane();
 
+        /**
+         * Starts run op mode button and define its listener
+         */
         continuousOp = new JRadioButtonMenuItem("Run");
         continuousOp.setMaximumSize(new Dimension(100, 20));
         continuousOp.setBackground(Color.LIGHT_GRAY);
@@ -100,22 +141,39 @@ public class GUI extends JFrame {
         continuousOp.setSelected(true);
         continuousOp.addActionListener(e -> opModeListener());
 
+        /**
+         * Starts debug op mode button and define its listener
+         */
         debugOp = new JRadioButtonMenuItem("Debug");
         debugOp.setMaximumSize(new Dimension(100, 20));
         debugOp.setBackground(Color.LIGHT_GRAY);
         debugOp.setForeground(Color.DARK_GRAY);
         debugOp.addActionListener(e -> opModeListener());
 
+        /**
+         * Adds both buttons as group inside the interface
+         */
         operation = new ButtonGroup();
         operation.add(continuousOp);
         operation.add(debugOp);
 
+        /**
+         * Labels used inside the interface
+         */
         JLabel op = new JLabel("Operation Mode: ");
         op.setForeground(Color.DARK_GRAY);
+        JLabel speed = new JLabel("Execution Speed: ");
+        speed.setForeground(Color.DARK_GRAY);
 
+        /**
+         * Adds every component in the menu bar
+         */
         menuBar.add(op);
         menuBar.add(continuousOp);
         menuBar.add(debugOp);
+        menuBar.add(new JSeparator());
+        menuBar.add(speed);
+        menuBar.add(slider);
         menuBar.add(new JSeparator());
         menuBar.add(examples);
         menuBar.add(help);
@@ -124,6 +182,9 @@ public class GUI extends JFrame {
         this.mem = mem;
         this.loader = loader;
 
+        /**
+         * Defines labels and panels used in the interface
+         */
         JLabel inputLabel = new JLabel("INPUT", JLabel.CENTER);
         inputLabel.setForeground(Color.WHITE);
         inputPanel = new JPanel();
@@ -146,7 +207,11 @@ public class GUI extends JFrame {
         currentLineMap = new HashMap<>();
         currentLine = 0;
         isLoading = true;
+        currentInstructions = new String[0];
 
+        /**
+         * Changes style of registers label and value
+         */
         pcLabel = new JLabel("PC: ");
         pcLabel.setForeground(Color.LIGHT_GRAY);
         spLabel = new JLabel("SP: ");
@@ -173,27 +238,44 @@ public class GUI extends JFrame {
         reValueLabel = new JLabel(cpu.getRe());
         reValueLabel.setForeground(Color.LIGHT_GRAY);
 
+        /**
+         * Creates READ instruction dialog
+         * and sends it to be used at CPU class.
+         */
         JOptionPane inputDialog = new JOptionPane();
         inputDialog.setSize(new Dimension(100, 100));
         inputDialog.setVisible(true);
         cpu.setUserInput(inputDialog);
 
+        /**
+         * Creates user instructions area
+         */
         textArea = new JTextArea();
         textArea.setLineWrap(true);
         textArea.setWrapStyleWord(true);
         textArea.setBackground(Color.LIGHT_GRAY);
         textArea.setForeground(Color.WHITE);
         textArea.setForeground(Color.DARK_GRAY);
+
+        /**
+         * Defines execution and error colors used to highlight instructions
+         */
         highlighter = (DefaultHighlighter)textArea.getHighlighter();
         executionColor = new DefaultHighlighter.DefaultHighlightPainter( Color.YELLOW );
         errorColor = new DefaultHighlighter.DefaultHighlightPainter(Color.RED);
-        currentInstructions = new String[0];
 
+        /**
+         * Allow instructions text area to be scrolled vertically only
+         */
         textAreaScrollPane = new JScrollPane(textArea,
                 ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         textAreaScrollPane.setMaximumSize(new Dimension(400, 700));
 
+        /**
+         * Starts console area and send it to the CPU
+         * It'll be used when the WRITE instruction is executed
+         */
         consoleArea = new JTextArea();
         consoleArea.setLineWrap(true);
         consoleArea.setWrapStyleWord(true);
@@ -207,6 +289,9 @@ public class GUI extends JFrame {
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         consoleAreaScrollPane.setMaximumSize(new Dimension(400, 100));
 
+        /**
+         * Starts user buttons and its listeners
+         */
         runButton = new JButton();
         runButton.setText("Run");
         runButton.setBackground(Color.GRAY);
@@ -238,6 +323,9 @@ public class GUI extends JFrame {
             }
         });
 
+        /**
+         * Clone memory values and defines its design
+         */
         memoryList = new String[mem.getMem().size()][2];
         String[] columnNames = {"Position", "Value"};
         updateMemoryList();
@@ -281,13 +369,23 @@ public class GUI extends JFrame {
         memoryScrollPane.setCorner(JScrollPane.UPPER_RIGHT_CORNER, panel);
         memoryScrollPane.setMaximumSize(new Dimension(200, 700));
 
-        timer = new Timer(1000, e -> stepButtonListener());
+        /**
+         * Defines timer initial delay and its listener
+         */
+        timer = new Timer(slider.getValue(), e -> stepButtonListener());
 
+        /**
+         * Initiates GUI
+         */
         layout = new GroupLayout(getContentPane());
         initComponents();
 
     }
 
+
+    /**
+     * Starts interface's main components.
+     */
     private void initComponents() {
 
         getContentPane().setBackground(Color.DARK_GRAY);
@@ -307,6 +405,9 @@ public class GUI extends JFrame {
 
     }
 
+    /**
+     * Positions layout components horizontally.
+     */
     private GroupLayout.Group getHorizontalGroup() {
 
         return layout.createSequentialGroup()
@@ -353,6 +454,9 @@ public class GUI extends JFrame {
 
     }
 
+    /**
+     * Positions layout components vertically.
+     */
     private GroupLayout.Group getVerticalGroup() {
 
         return layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
@@ -400,6 +504,11 @@ public class GUI extends JFrame {
 
     }
 
+    /**
+     * Set highlighter current position.
+     * Execute one instruction at a time.
+     * In case of exception the error message is shown in the output.
+     */
     private void stepButtonListener() {
 
         highlight(executionColor);
@@ -426,6 +535,11 @@ public class GUI extends JFrame {
 
     }
 
+    /**
+     * Check for errors before attempting to run.
+     * If Run is selected, it starts the timer between instructions.
+     * If Debug is selected, it executes one and awaits user action.
+     */
     private void runButtonListener() throws InterruptedException {
 
         if (textArea.getText().length() == 0) {
@@ -459,6 +573,8 @@ public class GUI extends JFrame {
         textArea.setEditable(false);
         examples.setEnabled(false);
 
+        if (debugOp.isSelected()) slider.setEnabled(false);
+
         if (continuousOp.isSelected()) runButton.setEnabled(false);
 
         if (continuousOp.isSelected()) {
@@ -469,6 +585,10 @@ public class GUI extends JFrame {
 
     }
 
+    /**
+     * Removes highlighter from previous instruction and
+     * create a new highlight on current instruction.
+     */
     private void highlight(DefaultHighlighter.DefaultHighlightPainter color) {
 
         highlighter.removeAllHighlights();
@@ -483,6 +603,9 @@ public class GUI extends JFrame {
 
     }
 
+    /**
+     * Enable/Disable operation mode options.
+     */
     private void setOperationState(boolean c, boolean d) {
 
         continuousOp.setEnabled(c);
@@ -490,6 +613,10 @@ public class GUI extends JFrame {
 
     }
 
+    /**
+     * Updates memory list new values.
+     * Updates registers new values.
+     */
     private void updateGUI() {
 
         updateMemoryList();
@@ -502,6 +629,10 @@ public class GUI extends JFrame {
 
     }
 
+    /**
+     * Updates GUI components after user action.
+     * Restarts Memory, CPU and Loader.
+     */
     private void refresh() {
 
         cleanButton.setEnabled(true);
@@ -509,6 +640,7 @@ public class GUI extends JFrame {
         opModeListener();
         textArea.setEditable(true);
         examples.setEnabled(true);
+        slider.setEnabled(true);
 
         if (!currentLineMap.isEmpty()) currentLineMap.clear();
         currentLine = 0;
@@ -521,6 +653,9 @@ public class GUI extends JFrame {
 
     }
 
+    /**
+     * Runs when clean button is pressed.
+     */
     private void cleanButtonListener() {
 
         currentLine = 0;
@@ -529,6 +664,9 @@ public class GUI extends JFrame {
 
     }
 
+    /**
+     * Changes state of operation mode.
+     */
     private void opModeListener() {
 
         if (continuousOp.isSelected()) {
@@ -536,6 +674,7 @@ public class GUI extends JFrame {
             mopValueLabel.setText("00000000");
             runButton.setEnabled(true);
             stepButton.setEnabled(false);
+            slider.setEnabled(true);
 
         } else {
 
@@ -547,6 +686,19 @@ public class GUI extends JFrame {
 
     }
 
+    /**
+     * Updates new execution speed selected by user.
+     */
+    private ChangeListener changeDelay() {
+
+        timer.setDelay(slider.getValue());
+        return null;
+
+    }
+
+    /**
+     * Gets current values in the memory.
+     */
     private void updateMemoryList() {
 
         String[] valuesList = mem.getMem().toArray(new String[mem.getMem().size()]);
@@ -557,12 +709,19 @@ public class GUI extends JFrame {
 
     }
 
+    /**
+     * Checks if syntax is wrong.
+     * Only binary code (0/1) and \n are allowed.
+     */
     private boolean isSyntaxWrong() {
 
         return !textArea.getText().trim().matches("[01\n]+");
 
     }
 
+    /**
+     * Converts an integer to a 16-bit binary string.
+     */
     private String bitsPadding(Integer pc) {
 
         String temp2 = Integer.toString(pc,2);
@@ -574,6 +733,10 @@ public class GUI extends JFrame {
 
     }
 
+    /**
+     * Defines each line of the interface with its
+     * respective instruction.
+     */
     private void fillCurrentLineMap() {
 
         int pc = 13;
@@ -592,6 +755,9 @@ public class GUI extends JFrame {
         isLoading = false;
     }
 
+    /**
+     * Write the chosen example in the editor.
+     */
     private ActionListener setExampleChosen(String index) {
 
         String example = Util.getExample(Integer.parseInt(index));
