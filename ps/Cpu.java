@@ -246,7 +246,6 @@ public class Cpu {
                     }
                     if(input.matches("[0-1]+") && input.length() == 16) { flagzin = false; }
                 } while (flagzin);
-                System.out.println(input);
                 pc = pointerIncrement(pc);
                 re = mem.getInstruction(toShort(pc));
                 if (ri.substring(9, 12).equals("001")) {

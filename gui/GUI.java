@@ -10,6 +10,7 @@ import javax.swing.plaf.basic.BasicScrollBarUI;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultHighlighter;
 import java.awt.*;
+import java.awt.event.ActionListener;
 import java.util.HashMap;
 
 public class GUI extends JFrame {
@@ -20,7 +21,8 @@ public class GUI extends JFrame {
 
     JMenuBar menuBar;
     JMenu examples;
-    JMenu help;
+    JButton help;
+    JOptionPane helpDialog;
     JRadioButtonMenuItem continuousOp;
     JRadioButtonMenuItem debugOp;
     ButtonGroup operation;
@@ -77,10 +79,21 @@ public class GUI extends JFrame {
 
         examples = new JMenu("Examples");
         examples.setForeground(Color.DARK_GRAY);
-        help = new JMenu("Help");
-        help.setForeground(Color.DARK_GRAY);
+        for (int i = 1; i <= 1; i++) {
+            JMenuItem exampleItem = new JMenuItem("Example #" + i);
+            exampleItem.addActionListener(e -> setExampleChosen(exampleItem.getText().split("#")[1]));
+            examples.add(exampleItem);
+        }
 
-        continuousOp = new JRadioButtonMenuItem("Continuous");
+        help = new JButton("Help");
+        help.setBackground(Color.LIGHT_GRAY);
+        help.setForeground(Color.DARK_GRAY);
+        help.setBorder(BorderFactory.createEmptyBorder());
+        help.setMargin(new Insets(10, 10, 10,10));
+        help.addActionListener(e -> helpDialog.showMessageDialog(null, Util.getHelp()));
+        helpDialog = new JOptionPane();
+
+        continuousOp = new JRadioButtonMenuItem("Run");
         continuousOp.setMaximumSize(new Dimension(100, 20));
         continuousOp.setBackground(Color.LIGHT_GRAY);
         continuousOp.setForeground(Color.DARK_GRAY);
@@ -277,8 +290,6 @@ public class GUI extends JFrame {
 
     private void initComponents() {
 
-        setDummyInstructions();
-
         getContentPane().setBackground(Color.DARK_GRAY);
         getContentPane().setLayout(layout);
         getContentPane().setPreferredSize(new Dimension(800, 700));
@@ -446,6 +457,7 @@ public class GUI extends JFrame {
         cleanButton.setEnabled(false);
         setOperationState(false, false);
         textArea.setEditable(false);
+        examples.setEnabled(false);
 
         if (continuousOp.isSelected()) runButton.setEnabled(false);
 
@@ -496,6 +508,7 @@ public class GUI extends JFrame {
         setOperationState(true, true);
         opModeListener();
         textArea.setEditable(true);
+        examples.setEnabled(true);
 
         if (!currentLineMap.isEmpty()) currentLineMap.clear();
         currentLine = 0;
@@ -551,12 +564,14 @@ public class GUI extends JFrame {
     }
 
     private String bitsPadding(Integer pc) {
+
         String temp2 = Integer.toString(pc,2);
         String temp1 = "";
         for (int i=16; i > temp2.length(); i--) {
             temp1 += "0";
         }
         return temp1.concat(temp2);
+
     }
 
     private void fillCurrentLineMap() {
@@ -568,43 +583,21 @@ public class GUI extends JFrame {
             loader.loadAllWordsFromString(instruction);
             currentLineMap.put(bitsPadding(pc), line);
             switch (instruction.length()) {
-                case 16:
-                    pc += 1;
-                    break;
-                case 32:
-                    pc += 2;
-                    break;
-                case 48:
-                    pc += 3;
-                    break;
+                case 16 -> pc += 1;
+                case 32 -> pc += 2;
+                case 48 -> pc += 3;
             }
             line++;
         }
         isLoading = false;
     }
 
-    // TEST PURPOSES
-    private void setDummyInstructions() {
-        textArea.setText("00000000000011000000000000000111\n");
-        //textArea.setText("00000000010000100000000000000111\n");
-        textArea.append("00000000000001000000000000010101\n");
-        textArea.append("00000000010001100000000000000001\n");
-        textArea.append("00000000000000000000000000001111\n");
-        textArea.append("00000000010000100000000000001111\n");
-        textArea.append("0000000000001011\n");
-/*        textArea.setText("00000000010000100000000000001011\n");
-        textArea.append("00000000010011100000000000000100\n");
-        textArea.append("00000000000001110000000000011111\n");
-        textArea.append("00000000010001100000000000011110\n");
-        textArea.append("00000000000001110000000000101100\n");
-        textArea.append("00000000010000100000000000001010\n");
-        textArea.append("00000000000001110000000000011011\n");
-        textArea.append("00000000000001010000000000011011\n");
-        textArea.append("00000000000000010000000000011011\n");
-        textArea.append("00000000000001100000000000000010\n");
-        textArea.append("00000000000001110000000000011110\n");
-        textArea.append("000000000010110100000000001000000000000000011111\n");
-        textArea.append("0000000000001011\n");*/
+    private ActionListener setExampleChosen(String index) {
+
+        String example = Util.getExample(Integer.parseInt(index));
+        textArea.setText(example);
+        return null;
+
     }
 
 }
