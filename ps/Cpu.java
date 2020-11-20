@@ -4,6 +4,16 @@ package ps;
 import javax.swing.*;
 
 public class Cpu {
+    /**
+     * ri = instruction register (registrador de instruções)
+     * re = adress register (registrador de endereço de memoria)
+     * pc = contador de instruções (program counter)
+     * sp = ponteiro de pilha (stack pointer)
+     * acc = acumulador
+     *
+     * out = saida da interface (usado no write)
+     * in = entrada da interface (usado no read)
+     */
     private String ri, re, pc, sp, acc;
     private JTextArea out;
     private JOptionPane in;
@@ -30,8 +40,16 @@ public class Cpu {
         this.in = in;
     }
 
+    /**
+     *
+     * @param mem
+     * @return what is PC is pointing to
+     */
     public String read(Memory mem) { return mem.getInstruction(toShort(pc)); }
 
+    /**
+     *  inicialize registers
+     */
     public void init() {
 
         ri = "0000000000000000";   //reg de instrução (opcode + endereçamento)
@@ -42,6 +60,11 @@ public class Cpu {
 
     }
 
+    /**
+     * convert short to string in binary
+     * @param reg short
+     * @return String in binary
+     */
     private String bitsPadding(short reg) {
         String temp2 = Integer.toString(reg,2);
         String temp1 = "";
@@ -51,6 +74,11 @@ public class Cpu {
         return temp1.concat(temp2);
     }
 
+    /**
+     * convert short to String (binary)
+     * @param reg
+     * @return
+     */
     private String toString(short reg) {
         String bin;
         String res;
@@ -63,19 +91,34 @@ public class Cpu {
         }
         return res;
     }
+
+    /**
+     * convert string to short
+     * @param bin string
+     * @return short
+     */
     private short toShort(String bin) {
         short res;
         res = (short)Integer.parseInt(bin, 2);
         return res;
     }
 
+    /**
+     * increment pointer ( used because pointer are saved in string )
+     * @param pointer
+     * @return ++pointer
+     */
     private String pointerIncrement(String pointer) {
         short aux = toShort(pointer);
         aux++;
         pointer = toString(aux);
         return pointer;
     }
-
+    /**
+     * increment pointer ( used because pointer are saved in string )
+     * @param pointer
+     * @return --pointer
+     */
     private String pointerDecrement(String pointer) {
         short aux = toShort(pointer);
         aux--;
@@ -83,87 +126,91 @@ public class Cpu {
         return pointer;
     }
 
+
     public boolean execute(Memory mem) throws IllegalArgumentException {
         ri = read(mem);
         re = "0000000000000000";
-        String value;  //pega os valores na memória de dados
+        String value;  //get values from data memory
         short operation;
-
+/**
+ * // 0-8 = '0's
+ * 9-12 = pointerType( '100' = immediate, '000' = direct, '001' = indirect )
+ * 12-16 oppcode
+ */
         switch (ri.substring(12, 16)) {
-            case "0000": //BR
+            case "0000": //BR (jump)
                 pc = pointerIncrement(pc);
                 re = mem.getInstruction(toShort(pc));
-                if (ri.substring(9, 12).equals("001")) //verifica se eh indireto
+                if (ri.substring(9, 12).equals("001")) //check if is indirect
                 {
                     re = mem.getData(toShort(re));
                 }
-                //caso não for, faz como direto
-                // pc = mem.getData(Integer.parseInt(re, 2)); jeito antigo
+                //else do it direct
                 pc = re;
-                pc = pointerDecrement(pc); //atualiza pra pos. anterior a desejada, já que o pc att no final tbm
+                pc = pointerDecrement(pc); //pc++ is exec in the end, so is decremented now to get the right position
                 break;
 
-            case "0001": //BRPOS
+            case "0001": //BRPOS (jump if acc > 0)
                 pc = pointerIncrement(pc);
                 re = mem.getInstruction(toShort(pc));
-                if (toShort(acc) > 0) {
-                    if (ri.substring(9, 12).equals("001")) {
+                if (toShort(acc) > 0) { // //checks if acc is positive
+                    if (ri.substring(9, 12).equals("001")) {//check if is indirect
                         re = mem.getData(toShort(re));
-                    }
+                    }//else do it direct
                     pc = re;
-                    pc = pointerDecrement(pc);
+                    pc = pointerDecrement(pc); //pc++ is exec in the end, so is decremented now to get the right position
                 }
                 break;
 
-            case "0010": //ADD
+            case "0010": //ADD ( acc = acc + operator)
                 pc = pointerIncrement(pc);
                 value = mem.getInstruction(toShort(pc));
-                if (ri.substring(9, 12).equals("001")) { //verifica se eh indireto
+                if (ri.substring(9, 12).equals("001")) { //check if is indirect
                     re = mem.getData(toShort(value));
                     value = mem.getData(toShort(re));
                 }
-                if (ri.substring(9, 12).equals("000")) { //verifica se eh direto
+                if (ri.substring(9, 12).equals("000")) { //check if is direct
                     re = value;
                     value = mem.getData(toShort(re));
-                }                               //caso não for nenhum dos dois faz como imediato
+                }                               //else do it immediate
                 operation = toShort(acc);
                 operation += toShort(value);
-                acc = toString(operation);
+                acc = toString(operation);//save result on ACC
                 break;
 
-            case "0011": //LOAD
+            case "0011": //LOAD (load operator in ACC)
                 pc = pointerIncrement(pc);
                 value = mem.getInstruction(toShort(pc));
-                if (ri.substring(9, 12).equals("001")) {
+                if (ri.substring(9, 12).equals("001")) {//check if is indirect
                     re = mem.getData(toShort(value));
                     value = mem.getData(toShort(re));
                 }
-                if (ri.substring(9, 12).equals("000")) {
+                if (ri.substring(9, 12).equals("000")) {//check if is direct
                     re = value;
                     value = mem.getData(toShort(re));
                 }
-                acc = value;
+                acc = value;//save result on ACC
                 break;
 
-            case "0100": //BRZERO
+            case "0100": //BRZERO (jump if acc == 0)
                 pc = pointerIncrement(pc);
                 re = mem.getInstruction(toShort(pc));
-                if (toShort(acc) == 0) {
-                    if (ri.substring(9, 12).equals("001")) {
+                if (toShort(acc) == 0) { //checks if acc is zero
+                    if (ri.substring(9, 12).equals("001")) { //check if is indirect
                         re = mem.getData(toShort(re));
-                    }
+                    }//else do it direct
                     pc = re;
                     pc = pointerDecrement(pc);
                 }
                 break;
 
-            case "0101": //BRNEG
+            case "0101": //BRNEG (jump if acc < 0)
                 pc = pointerIncrement(pc);
                 re = mem.getInstruction(toShort(pc));
-                if (toShort(acc) < 0) {
-                    if (ri.substring(9, 12).equals("001")) {
+                if (toShort(acc) < 0) { //checks if acc is negative
+                    if (ri.substring(9, 12).equals("001")) { //check if is indirect
                         re = mem.getData(toShort(re));
-                    }
+                    }//else do it direct
                     pc = re;
                     pc = pointerDecrement(pc);
                 }
@@ -172,59 +219,59 @@ public class Cpu {
             case "0110": //SUB
                 pc = pointerIncrement(pc);
                 value = mem.getInstruction(toShort(pc));
-                if (ri.substring(9, 12).equals("001")) {
+                if (ri.substring(9, 12).equals("001")) {//check if is indirect
                     re = mem.getData(toShort(value));
                     value = mem.getData(toShort(re));
                 }
-                if (ri.substring(9, 12).equals("000")) {
+                if (ri.substring(9, 12).equals("000")) {//check if is direct
                     re = value;
                     value = mem.getData(toShort(re));
-                }
+                }//else do it immediate
                 operation = toShort(acc);
                 operation -= toShort(value);
-                acc = toString(operation);
+                acc = toString(operation);//save result on ACC
                 break;
 
             case "0111": //STORE
                 pc = pointerIncrement(pc);
                 re = mem.getInstruction(toShort(pc));
-                if (ri.substring(9, 12).equals("001")) {
+                if (ri.substring(9, 12).equals("001")) {//check if is indirect
                     re = mem.getData(toShort(re));
                 }
-                mem.setData(toShort(re), acc);
+                mem.setData(toShort(re), acc); // set on memory(position on RE) the value on ACC
                 break;
 
             case "1000": //WRITE
                 pc = pointerIncrement(pc);
                 value = mem.getInstruction(toShort(pc));
-                if (ri.substring(9, 12).equals("001")) {
+                if (ri.substring(9, 12).equals("001")) {//check if is indirect
                     re = mem.getData(toShort(value));
                     value = mem.getData(toShort(re));
                 }
-                if (ri.substring(9, 12).equals("000")) {
+                if (ri.substring(9, 12).equals("000")) {//check if is direct
                     re = value;
                     value = mem.getData(toShort(re));
                 }
-                out.append("\nOutput: " + value + "\n");
+                out.append("\nOutput: " + value + "\n");// output on GUI
                 break;
 
             case "1010": //DIVIDE
                 pc = pointerIncrement(pc);
                 value = mem.getInstruction(toShort(pc));
-                if (ri.substring(9, 12).equals("001")) {
+                if (ri.substring(9, 12).equals("001")) {//check if is indirect
                     re = mem.getData(toShort(value));
                     value = mem.getData(toShort(re));
                 }
-                if (ri.substring(9, 12).equals("000")) {
+                if (ri.substring(9, 12).equals("000")) {//check if is direct
                     re = value;
                     value = mem.getData(toShort(re));
                 }
-                if (toShort(value) == 0) {
-                    throw new IllegalArgumentException("Divisão por 0");
+                if (toShort(value) == 0) {//exception if is dividing by zero
+                    throw new IllegalArgumentException("Dividing by 0");
                 }
                 operation = toShort(acc);
-                operation /= toShort(value);
-                acc = toString(operation);
+                operation /= toShort(value);//DIVISION
+                acc = toString(operation);//save result on ACC
                 break;
 
             case "1011": //STOP
@@ -234,37 +281,38 @@ public class Cpu {
                 boolean flagzin = true;
                 String input;
                 do {
-                    input = JOptionPane.showInputDialog("Digite o número em binário (16 bits):");
-                    if(input == null) {
-                        throw new IllegalArgumentException("Execução cancelada pelo usuário!");
+                    input = JOptionPane.showInputDialog("insert a binary number (16 bits):"); //receive the input
+                    if(input == null) { // cancel exception
+                        throw new IllegalArgumentException("stopped by user!");
                     }
-                    if(!input.matches("[0-1]+")) {
-                        JOptionPane.showMessageDialog(null, "Input deve conter somente 0's e 1's! Tente novamente.");
+                    if(!input.matches("[0-1]+")) {// input in wrong format
+                        JOptionPane.showMessageDialog(null, "Input can only have '0's and '1's.");
+
                     }
-                    if(input.length() != 16) {
-                        JOptionPane.showMessageDialog(null, "Input deve conter 16 números! Tente novamente.");
+                    if(input.length() != 16) {// input in wrong format
+                        JOptionPane.showMessageDialog(null, "Input can only have 16 characters.");
                     }
                     if(input.matches("[0-1]+") && input.length() == 16) { flagzin = false; }
                 } while (flagzin);
                 pc = pointerIncrement(pc);
-                re = mem.getInstruction(toShort(pc));
-                if (ri.substring(9, 12).equals("001")) {
+                re = mem.getInstruction(toShort(pc)); // re = operator(position to save)
+                if (ri.substring(9, 12).equals("001")) {//check if is indirect
                     re = mem.getData(toShort(re));
                 }
-                mem.setData(toShort(re), input);
+                mem.setData(toShort(re), input); //write the input on memory
                 break;
 
-            case "1101": //COPY
+            case "1101": //COPY (2 operators) cpy op2 on op1
                 String temp;
                 pc = pointerIncrement(pc);
-                re = mem.getInstruction(toShort(pc));  //pega primeiro operando
-                if (ri.substring(9, 12).equals("001") || ri.substring(9, 12).equals("011") || ri.substring(9, 12).equals("101")) {
+                re = mem.getInstruction(toShort(pc));  //get the first operator
+                if (ri.substring(9, 12).equals("001") || ri.substring(9, 12).equals("011") || ri.substring(9, 12).equals("101")) {// if ri[2] == 1
                     re = mem.getData(toShort(re));
                 }
-                value = re;
+                value = re; //value recieves the first(value)
                 pc = pointerIncrement(pc);
-                temp = mem.getInstruction(toShort(pc)); //pega segundo operando
-                if (ri.substring(9, 12).equals("010") || ri.substring(9, 12).equals("011")){
+                temp = mem.getInstruction(toShort(pc)); //get the second operator
+                if (ri.substring(9, 12).equals("010") || ri.substring(9, 12).equals("011")){ // if [1] == 1
                     re = mem.getData(toShort(temp));
                     temp = mem.getData(toShort(re));
                 }
@@ -272,47 +320,49 @@ public class Cpu {
                     re = temp;
                     temp = mem.getData(toShort(re));
                 }
+                //temp = op2(data)
+                //value = op1(pointer)
                 mem.setData(toShort(value), temp);
                 break;
 
             case "1110": //MULT
                 pc = pointerIncrement(pc);
                 value = mem.getInstruction(toShort(pc));
-                if (ri.substring(9, 12).equals("001")) {
+                if (ri.substring(9, 12).equals("001")) {//check if is indirect
                     re = mem.getData(toShort(value));
                     value = mem.getData(toShort(re));
                 }
-                if (ri.substring(9, 12).equals("000")) {
+                if (ri.substring(9, 12).equals("000")) {//check if is direct
                     re = value;
                     value = mem.getData(toShort(re));
                 }
                 operation = toShort(acc);
-                operation *= toShort(value);
-                acc = toString(operation);
+                operation *= toShort(value); //MULT
+                acc = toString(operation); //save result on ACC
                 break;
 
             case "1111": //CALL
                 pc = pointerIncrement(pc);
                 re = mem.getInstruction(toShort(pc));
-                if (toShort(sp) == 10) {
-                    sp = "0000000000000000";
-                    throw new IllegalArgumentException("Stack Overflow");  //se tentar colocar mais alguma coisa na pilha e ela já tiver cheia, aponta para a base e lança a exception
+                if (toShort(sp) == 10) { // if it is full
+                    sp = "0000000000000000"; // point to base
+                    throw new IllegalArgumentException("Stack Overflow"); // Stack Overflow exception
                 }
-                if (ri.substring(9, 12).equals("001")) {
+                if (ri.substring(9, 12).equals("001")) {//check if is indirect
                     re = mem.getData(toShort(re));
                 }
-                sp = pointerIncrement(sp);
-                mem.setDataStack(toShort(sp), pc);
-                pc = re;  //mesmo esquema dos branch
+                sp = pointerIncrement(sp);// point to next part
+                mem.setDataStack(toShort(sp), pc); // to remember where you stopped
+                pc = re; // jump
                 pc = pointerDecrement(pc);
                 break;
 
             case "1001": //RET
-                if(toShort(sp) == 0) {
-                    throw new IllegalArgumentException("Pilha vazia"); //se não tiver nada na pilha e tentar dar RET, lança a exception
+                if(toShort(sp) == 0) {//empty stack exception
+                    throw new IllegalArgumentException("empty stack");
                 }
-                pc = mem.getDataStack(toShort(sp)); //faz um pop
-                sp = pointerDecrement(sp);
+                pc = mem.getDataStack(toShort(sp)); //pop
+                sp = pointerDecrement(sp); //
                 break;
         }
         pc = pointerIncrement(pc);

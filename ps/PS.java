@@ -8,7 +8,12 @@ import java.awt.*;
 public class PS {
 
     public static void main(String[] args) {
-
+/**
+ * run the application
+ * and inicialize interface
+ *
+ *
+ */
         Memory mem = new Memory();
         Loader loader = new Loader(13, mem);
         Cpu cpu = new Cpu();
