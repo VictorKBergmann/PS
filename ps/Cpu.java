@@ -1,4 +1,3 @@
-
 package ps;
 
 
@@ -16,11 +15,11 @@ public class Cpu {
     public String getAcc() { return acc; }
 
     public String getPc() { return pc; }
-    
+
     public String getRi() { return ri; }
-    
+
     public String getRe() { return re; }
-            
+
     public String getSp() { return sp; }
 
     public void setUserOutput(JTextArea out) {
@@ -31,7 +30,7 @@ public class Cpu {
         this.in = in;
     }
 
-    public String read(Memory mem) { return mem.getInstruction(Integer.parseInt(pc, 2)); }
+    public String read(Memory mem) { return mem.getInstruction(toShort(pc)); }
 
     public void init() {
 
@@ -42,43 +41,61 @@ public class Cpu {
         pc = "0000000000001101";
 
     }
-    
-    private String bitsPadding(int reg) {
-        String temp2 = Integer.toString(reg,2);     
-        String temp1 = ""; 
-        for (int i=16; i > temp2.length(); i--) { 
+
+    private String bitsPadding(short reg) {
+        String temp2 = Integer.toString(reg,2);
+        String temp1 = "";
+        for (int i=16; i > temp2.length(); i--) {
             temp1 += "0";
         }
         return temp1.concat(temp2);
     }
-    
+
+    private String toString(short reg) {
+        String bin;
+        String res;
+        if(reg < 0){
+            bin = Integer.toBinaryString(reg);
+            res = bin.substring(16, 32);
+        }
+        else{
+            res = bitsPadding(reg);
+        }
+        return res;
+    }
+    private short toShort(String bin) {
+        short res;
+        res = (short)Integer.parseInt(bin, 2);
+        return res;
+    }
+
     private String pointerIncrement(String pointer) {
-        int aux = Integer.parseInt(pointer, 2);
+        short aux = toShort(pointer);
         aux++;
-        pointer = bitsPadding(aux);
+        pointer = toString(aux);
         return pointer;
     }
-    
+
     private String pointerDecrement(String pointer) {
-        int aux = Integer.parseInt(pointer, 2);
+        short aux = toShort(pointer);
         aux--;
-        pointer = bitsPadding(aux);
+        pointer = toString(aux);
         return pointer;
     }
-    
+
     public boolean execute(Memory mem) throws IllegalArgumentException {
         ri = read(mem);
         re = "0000000000000000";
         String value;  //pega os valores na memória de dados
-        int operation;
+        short operation;
 
         switch (ri.substring(12, 16)) {
             case "0000": //BR
                 pc = pointerIncrement(pc);
-                re = mem.getInstruction(Integer.parseInt(pc, 2));                
+                re = mem.getInstruction(toShort(pc));
                 if (ri.substring(9, 12).equals("001")) //verifica se eh indireto
                 {
-                    re = mem.getData(Integer.parseInt(re, 2));
+                    re = mem.getData(toShort(re));
                 }
                 //caso não for, faz como direto
                 // pc = mem.getData(Integer.parseInt(re, 2)); jeito antigo
@@ -88,10 +105,10 @@ public class Cpu {
 
             case "0001": //BRPOS
                 pc = pointerIncrement(pc);
-                re = mem.getInstruction(Integer.parseInt(pc, 2));
-                if (Integer.parseInt(acc, 2) > 0) {
+                re = mem.getInstruction(toShort(pc));
+                if (toShort(acc) > 0) {
                     if (ri.substring(9, 12).equals("001")) {
-                        re = mem.getData(Integer.parseInt(re, 2));
+                        re = mem.getData(toShort(re));
                     }
                     pc = re;
                     pc = pointerDecrement(pc);
@@ -100,40 +117,40 @@ public class Cpu {
 
             case "0010": //ADD
                 pc = pointerIncrement(pc);
-                value = mem.getInstruction(Integer.parseInt(pc, 2));
+                value = mem.getInstruction(toShort(pc));
                 if (ri.substring(9, 12).equals("001")) { //verifica se eh indireto
-                    re = mem.getData(Integer.parseInt(value, 2));
-                    value = mem.getData(Integer.parseInt(re, 2));
+                    re = mem.getData(toShort(value));
+                    value = mem.getData(toShort(re));
                 }
                 if (ri.substring(9, 12).equals("000")) { //verifica se eh direto
                     re = value;
-                    value = mem.getData(Integer.parseInt(re, 2));
+                    value = mem.getData(toShort(re));
                 }                               //caso não for nenhum dos dois faz como imediato
-                operation = Integer.parseInt(acc, 2);
-                operation += Integer.parseInt(value, 2);   
-                acc = bitsPadding(operation);
+                operation = toShort(acc);
+                operation += toShort(value);
+                acc = toString(operation);
                 break;
 
             case "0011": //LOAD
                 pc = pointerIncrement(pc);
-                value = mem.getInstruction(Integer.parseInt(pc, 2));
+                value = mem.getInstruction(toShort(pc));
                 if (ri.substring(9, 12).equals("001")) {
-                    re = mem.getData(Integer.parseInt(value, 2));
-                    value = mem.getData(Integer.parseInt(re, 2));
+                    re = mem.getData(toShort(value));
+                    value = mem.getData(toShort(re));
                 }
                 if (ri.substring(9, 12).equals("000")) {
                     re = value;
-                    value = mem.getData(Integer.parseInt(re, 2));
+                    value = mem.getData(toShort(re));
                 }
                 acc = value;
                 break;
 
             case "0100": //BRZERO
                 pc = pointerIncrement(pc);
-                re = mem.getInstruction(Integer.parseInt(pc, 2));
-                if (Integer.parseInt(acc, 2) == 0) {
+                re = mem.getInstruction(toShort(pc));
+                if (toShort(acc) == 0) {
                     if (ri.substring(9, 12).equals("001")) {
-                        re = mem.getData(Integer.parseInt(re, 2));
+                        re = mem.getData(toShort(re));
                     }
                     pc = re;
                     pc = pointerDecrement(pc);
@@ -142,76 +159,75 @@ public class Cpu {
 
             case "0101": //BRNEG
                 pc = pointerIncrement(pc);
-                re = mem.getInstruction(Integer.parseInt(pc, 2));
-                if (Integer.parseInt(acc, 2) < 0) {
+                re = mem.getInstruction(toShort(pc));
+                if (toShort(acc) < 0) {
                     if (ri.substring(9, 12).equals("001")) {
-                        re = mem.getData(Integer.parseInt(re, 2));
+                        re = mem.getData(toShort(re));
                     }
-                   pc = re;
-                   pc = pointerDecrement(pc);
+                    pc = re;
+                    pc = pointerDecrement(pc);
                 }
                 break;
 
             case "0110": //SUB
                 pc = pointerIncrement(pc);
-                value = mem.getInstruction(Integer.parseInt(pc, 2));
+                value = mem.getInstruction(toShort(pc));
                 if (ri.substring(9, 12).equals("001")) {
-                    re = mem.getData(Integer.parseInt(value, 2));
-                    value = mem.getData(Integer.parseInt(re, 2));
+                    re = mem.getData(toShort(value));
+                    value = mem.getData(toShort(re));
                 }
                 if (ri.substring(9, 12).equals("000")) {
                     re = value;
-                    value = mem.getData(Integer.parseInt(re, 2));
+                    value = mem.getData(toShort(re));
                 }
-                operation = Integer.parseInt(acc, 2);
-                operation -= Integer.parseInt(value, 2);   
-                acc = bitsPadding(operation);
+                operation = toShort(acc);
+                operation -= toShort(value);
+                acc = toString(operation);
                 break;
-                
+
             case "0111": //STORE
-                System.out.println("TO AQUI CARAI");
                 pc = pointerIncrement(pc);
-                re = mem.getInstruction(Integer.parseInt(pc, 2));
+                re = mem.getInstruction(toShort(pc));
                 if (ri.substring(9, 12).equals("001")) {
-                    re = mem.getData(Integer.parseInt(re, 2));
+                    re = mem.getData(toShort(re));
                 }
-                mem.setData(Integer.parseInt(re,2), acc);
+                mem.setData(toShort(re), acc);
                 break;
 
             case "1000": //WRITE
                 pc = pointerIncrement(pc);
-                value = mem.getInstruction(Integer.parseInt(pc, 2));
+                value = mem.getInstruction(toShort(pc));
                 if (ri.substring(9, 12).equals("001")) {
-                    re = mem.getData(Integer.parseInt(value, 2));
-                    value = mem.getData(Integer.parseInt(re, 2));
+                    re = mem.getData(toShort(value));
+                    value = mem.getData(toShort(re));
                 }
                 if (ri.substring(9, 12).equals("000")) {
                     re = value;
-                    value = mem.getData(Integer.parseInt(re, 2));
+                    value = mem.getData(toShort(re));
                 }
                 out.append("\nOutput: " + value + "\n");
                 break;
 
             case "1010": //DIVIDE
                 pc = pointerIncrement(pc);
-                value = mem.getInstruction(Integer.parseInt(pc, 2));
+                value = mem.getInstruction(toShort(pc));
                 if (ri.substring(9, 12).equals("001")) {
-                    re = mem.getData(Integer.parseInt(value, 2));
-                    value = mem.getData(Integer.parseInt(re, 2));
+                    re = mem.getData(toShort(value));
+                    value = mem.getData(toShort(re));
                 }
                 if (ri.substring(9, 12).equals("000")) {
                     re = value;
-                    value = mem.getData(Integer.parseInt(re, 2));
+                    value = mem.getData(toShort(re));
                 }
-                if (Integer.parseInt(value, 2) == 0) {
+                if (toShort(value) == 0) {
                     throw new IllegalArgumentException("Divisão por 0");
                 }
-                operation = Integer.parseInt(acc, 2);
-                operation /= Integer.parseInt(value, 2);
-                acc = bitsPadding(operation);
+                operation = toShort(acc);
+                operation /= toShort(value);
+                acc = toString(operation);
                 break;
 
-            case "1011": //STOP                
+            case "1011": //STOP
                 throw new IllegalArgumentException("END OF EXECUTION");
 
             case "1100": //READ
@@ -232,75 +248,75 @@ public class Cpu {
                 } while (flagzin);
                 System.out.println(input);
                 pc = pointerIncrement(pc);
-                re = mem.getInstruction(Integer.parseInt(pc, 2));
+                re = mem.getInstruction(toShort(pc));
                 if (ri.substring(9, 12).equals("001")) {
-                    re = mem.getData(Integer.parseInt(re, 2));
+                    re = mem.getData(toShort(re));
                 }
-                 mem.setData(Integer.parseInt(re,2), input);
+                mem.setData(toShort(re), input);
                 break;
 
             case "1101": //COPY
                 String temp;
                 pc = pointerIncrement(pc);
-                re = mem.getInstruction(Integer.parseInt(pc, 2));  //pega primeiro operando
+                re = mem.getInstruction(toShort(pc));  //pega primeiro operando
                 if (ri.substring(9, 12).equals("001") || ri.substring(9, 12).equals("011") || ri.substring(9, 12).equals("101")) {
-                    re = mem.getData(Integer.parseInt(re, 2));    
+                    re = mem.getData(toShort(re));
                 }
                 value = re;
                 pc = pointerIncrement(pc);
-                temp = mem.getInstruction(Integer.parseInt(pc, 2)); //pega segundo operando
+                temp = mem.getInstruction(toShort(pc)); //pega segundo operando
                 if (ri.substring(9, 12).equals("010") || ri.substring(9, 12).equals("011")){
-                    re = mem.getData(Integer.parseInt(temp, 2));
-                     temp = mem.getData(Integer.parseInt(re, 2));
+                    re = mem.getData(toShort(temp));
+                    temp = mem.getData(toShort(re));
                 }
                 if (ri.substring(9, 12).equals("000")){
                     re = temp;
-                    temp = mem.getData(Integer.parseInt(re, 2));
+                    temp = mem.getData(toShort(re));
                 }
-                mem.setData(Integer.parseInt(value,2), temp);
+                mem.setData(toShort(value), temp);
                 break;
 
             case "1110": //MULT
                 pc = pointerIncrement(pc);
-                value = mem.getInstruction(Integer.parseInt(pc, 2));
+                value = mem.getInstruction(toShort(pc));
                 if (ri.substring(9, 12).equals("001")) {
-                    re = mem.getData(Integer.parseInt(value, 2));
-                    value = mem.getData(Integer.parseInt(re, 2));
+                    re = mem.getData(toShort(value));
+                    value = mem.getData(toShort(re));
                 }
                 if (ri.substring(9, 12).equals("000")) {
                     re = value;
-                    value = mem.getData(Integer.parseInt(re, 2));
+                    value = mem.getData(toShort(re));
                 }
-                operation = Integer.parseInt(acc, 2);
-                operation *= Integer.parseInt(value, 2);   
-                acc = bitsPadding(operation);
+                operation = toShort(acc);
+                operation *= toShort(value);
+                acc = toString(operation);
                 break;
 
             case "1111": //CALL
                 pc = pointerIncrement(pc);
-                re = mem.getInstruction(Integer.parseInt(pc, 2));
-                if (Integer.parseInt(sp, 2) == 10) {
+                re = mem.getInstruction(toShort(pc));
+                if (toShort(sp) == 10) {
                     sp = "0000000000000000";
                     throw new IllegalArgumentException("Stack Overflow");  //se tentar colocar mais alguma coisa na pilha e ela já tiver cheia, aponta para a base e lança a exception
                 }
                 if (ri.substring(9, 12).equals("001")) {
-                    re = mem.getData(Integer.parseInt(re, 2));
+                    re = mem.getData(toShort(re));
                 }
                 sp = pointerIncrement(sp);
-                mem.setDataStack(Integer.parseInt(sp, 2), pc);
+                mem.setDataStack(toShort(sp), pc);
                 pc = re;  //mesmo esquema dos branch
                 pc = pointerDecrement(pc);
                 break;
 
             case "1001": //RET
-                if(Integer.parseInt(sp, 2) == 0) {
+                if(toShort(sp) == 0) {
                     throw new IllegalArgumentException("Pilha vazia"); //se não tiver nada na pilha e tentar dar RET, lança a exception
                 }
-                pc = mem.getDataStack(Integer.parseInt(sp, 2)); //faz um pop
+                pc = mem.getDataStack(toShort(sp)); //faz um pop
                 sp = pointerDecrement(sp);
                 break;
         }
         pc = pointerIncrement(pc);
         return true;
-    }   
+    }
 }
