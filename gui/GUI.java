@@ -5,6 +5,8 @@ import ps.Loader;
 import ps.Memory;
 
 import javax.swing.*;
+import javax.swing.plaf.basic.BasicArrowButton;
+import javax.swing.plaf.basic.BasicScrollBarUI;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultHighlighter;
 import java.awt.*;
@@ -12,14 +14,18 @@ import java.util.HashMap;
 
 public class GUI extends JFrame {
 
-    private Memory mem;
-    private Cpu cpu;
-    private Loader loader;
+    private final Memory mem;
+    private final Cpu cpu;
+    private final Loader loader;
 
-    private JComboBox opModeComboBox;
-    private String[] opMode = {"Continuous Mode", "Debug Mode"};
+    JMenuBar menuBar;
+    JMenu examples;
+    JMenu help;
+    JRadioButtonMenuItem continuousOp;
+    JRadioButtonMenuItem debugOp;
+    ButtonGroup operation;
 
-    private JTable memoryTable;
+    private final JTable memoryTable;
     private String[][] memoryList;
     private final JScrollPane memoryScrollPane;
 
@@ -27,11 +33,8 @@ public class GUI extends JFrame {
     private final JButton cleanButton;
     private final JButton stepButton;
 
-    private final JLabel inputLabel;
     private final JPanel inputPanel;
-    private final JLabel memoryLabel;
     private final JPanel memoryPanel;
-    private final JLabel outputLabel;
     private final JPanel outputPanel;
 
     private final JLabel pcLabel;
@@ -48,14 +51,13 @@ public class GUI extends JFrame {
     private final JLabel riValueLabel;
     private final JLabel reValueLabel;
 
-    private final JOptionPane inputDialog;
-
     private final JTextArea textArea;
     private final JScrollPane textAreaScrollPane;
     private int currentLine;
     private String[] currentInstructions;
-    private DefaultHighlighter highlighter;
-    private DefaultHighlighter.DefaultHighlightPainter painter;
+    private final DefaultHighlighter highlighter;
+    private final DefaultHighlighter.DefaultHighlightPainter executionColor;
+    private final DefaultHighlighter.DefaultHighlightPainter errorColor;
 
     private final JTextArea consoleArea;
     private final JScrollPane consoleAreaScrollPane;
@@ -69,20 +71,62 @@ public class GUI extends JFrame {
 
     public GUI(Memory mem, Cpu cpu, Loader loader){
 
+        menuBar = new JMenuBar();
+        menuBar.setBackground(Color.LIGHT_GRAY);
+        menuBar.setBorder(BorderFactory.createEmptyBorder());
+
+        examples = new JMenu("Examples");
+        examples.setForeground(Color.DARK_GRAY);
+        help = new JMenu("Help");
+        help.setForeground(Color.DARK_GRAY);
+
+        continuousOp = new JRadioButtonMenuItem("Continuous");
+        continuousOp.setMaximumSize(new Dimension(100, 20));
+        continuousOp.setBackground(Color.LIGHT_GRAY);
+        continuousOp.setForeground(Color.DARK_GRAY);
+        continuousOp.setSelected(true);
+        continuousOp.addActionListener(e -> opModeListener());
+
+        debugOp = new JRadioButtonMenuItem("Debug");
+        debugOp.setMaximumSize(new Dimension(100, 20));
+        debugOp.setBackground(Color.LIGHT_GRAY);
+        debugOp.setForeground(Color.DARK_GRAY);
+        debugOp.addActionListener(e -> opModeListener());
+
+        operation = new ButtonGroup();
+        operation.add(continuousOp);
+        operation.add(debugOp);
+
+        JLabel op = new JLabel("Operation Mode: ");
+        op.setForeground(Color.DARK_GRAY);
+
+        menuBar.add(op);
+        menuBar.add(continuousOp);
+        menuBar.add(debugOp);
+        menuBar.add(new JSeparator());
+        menuBar.add(examples);
+        menuBar.add(help);
+
         this.cpu = cpu;
         this.mem = mem;
         this.loader = loader;
 
-        inputLabel = new JLabel("INPUT", JLabel.CENTER);
+        JLabel inputLabel = new JLabel("INPUT", JLabel.CENTER);
+        inputLabel.setForeground(Color.WHITE);
         inputPanel = new JPanel();
+        inputPanel.setBackground(Color.DARK_GRAY);
         inputPanel.setMaximumSize(new Dimension(400, 2));
         inputPanel.add(inputLabel);
-        memoryLabel = new JLabel("MEMORY", JLabel.CENTER);
+        JLabel memoryLabel = new JLabel("MEMORY", JLabel.CENTER);
+        memoryLabel.setForeground(Color.WHITE);
         memoryPanel = new JPanel();
+        memoryPanel.setBackground(Color.DARK_GRAY);
         memoryPanel.setMaximumSize(new Dimension(200, 2));
         memoryPanel.add(memoryLabel);
-        outputLabel = new JLabel("OUTPUT", JLabel.CENTER);
+        JLabel outputLabel = new JLabel("OUTPUT", JLabel.CENTER);
+        outputLabel.setForeground(Color.WHITE);
         outputPanel = new JPanel();
+        outputPanel.setBackground(Color.DARK_GRAY);
         outputPanel.setMaximumSize(new Dimension(400, 2));
         outputPanel.add(outputLabel);
 
@@ -91,20 +135,32 @@ public class GUI extends JFrame {
         isLoading = true;
 
         pcLabel = new JLabel("PC: ");
+        pcLabel.setForeground(Color.LIGHT_GRAY);
         spLabel = new JLabel("SP: ");
+        spLabel.setForeground(Color.LIGHT_GRAY);
         accLabel = new JLabel("ACC: ");
+        accLabel.setForeground(Color.LIGHT_GRAY);
         mopLabel = new JLabel("MOP: ");
+        mopLabel.setForeground(Color.LIGHT_GRAY);
         riLabel = new JLabel("RI: ");
+        riLabel.setForeground(Color.LIGHT_GRAY);
         reLabel = new JLabel("RE: ");
+        reLabel.setForeground(Color.LIGHT_GRAY);
 
         pcValueLabel = new JLabel(cpu.getPc());
+        pcValueLabel.setForeground(Color.LIGHT_GRAY);
         spValueLabel = new JLabel(cpu.getSp());
+        spValueLabel.setForeground(Color.LIGHT_GRAY);
         accValueLabel = new JLabel(cpu.getAcc());
+        accValueLabel.setForeground(Color.LIGHT_GRAY);
         mopValueLabel = new JLabel();
+        mopValueLabel.setForeground(Color.LIGHT_GRAY);
         riValueLabel = new JLabel(cpu.getRi());
+        riValueLabel.setForeground(Color.LIGHT_GRAY);
         reValueLabel = new JLabel(cpu.getRe());
+        reValueLabel.setForeground(Color.LIGHT_GRAY);
 
-        inputDialog = new JOptionPane();
+        JOptionPane inputDialog = new JOptionPane();
         inputDialog.setSize(new Dimension(100, 100));
         inputDialog.setVisible(true);
         cpu.setUserInput(inputDialog);
@@ -112,8 +168,12 @@ public class GUI extends JFrame {
         textArea = new JTextArea();
         textArea.setLineWrap(true);
         textArea.setWrapStyleWord(true);
+        textArea.setBackground(Color.LIGHT_GRAY);
+        textArea.setForeground(Color.WHITE);
+        textArea.setForeground(Color.DARK_GRAY);
         highlighter = (DefaultHighlighter)textArea.getHighlighter();
-        painter = new DefaultHighlighter.DefaultHighlightPainter( Color.YELLOW );
+        executionColor = new DefaultHighlighter.DefaultHighlightPainter( Color.YELLOW );
+        errorColor = new DefaultHighlighter.DefaultHighlightPainter(Color.RED);
         currentInstructions = new String[0];
 
         textAreaScrollPane = new JScrollPane(textArea,
@@ -125,6 +185,8 @@ public class GUI extends JFrame {
         consoleArea.setLineWrap(true);
         consoleArea.setWrapStyleWord(true);
         consoleArea.setEditable(false);
+        consoleArea.setBackground(Color.BLACK);
+        consoleArea.setForeground(Color.GREEN);
         cpu.setUserOutput(consoleArea);
 
         consoleAreaScrollPane = new JScrollPane(consoleArea,
@@ -132,12 +194,10 @@ public class GUI extends JFrame {
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         consoleAreaScrollPane.setMaximumSize(new Dimension(400, 100));
 
-        opModeComboBox = new JComboBox(opMode);
-        opModeComboBox.setMaximumSize(opModeComboBox.getPreferredSize());
-        opModeComboBox.addActionListener(e -> opModeListener());
-
         runButton = new JButton();
         runButton.setText("Run");
+        runButton.setBackground(Color.GRAY);
+        runButton.setForeground(Color.WHITE);
         runButton.addActionListener(e -> {
             try {
                 runButtonListener();
@@ -148,10 +208,14 @@ public class GUI extends JFrame {
 
         cleanButton = new JButton();
         cleanButton.setText("Clean");
+        cleanButton.setBackground(Color.GRAY);
+        cleanButton.setForeground(Color.WHITE);
         cleanButton.addActionListener(e -> cleanButtonListener());
 
         stepButton = new JButton();
         stepButton.setText("Step");
+        stepButton.setBackground(Color.GRAY);
+        stepButton.setForeground(Color.WHITE);
         opModeListener();
         stepButton.addActionListener(e -> {
             try {
@@ -167,12 +231,44 @@ public class GUI extends JFrame {
         memoryTable = new JTable(memoryList, columnNames);
         memoryTable.getColumnModel().getColumn(0).setPreferredWidth(10);
         memoryTable.setEnabled(false);
+        memoryTable.setBackground(Color.LIGHT_GRAY);
+        memoryTable.setForeground(Color.DARK_GRAY);
+        memoryTable.getTableHeader().setBackground(Color.DARK_GRAY);
+        memoryTable.getTableHeader().setForeground(Color.WHITE);
+        memoryTable.setBorder(BorderFactory.createEmptyBorder());
         memoryScrollPane = new JScrollPane(memoryTable);
+        memoryScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        memoryScrollPane.getVerticalScrollBar().setBackground(Color.DARK_GRAY);
+        memoryScrollPane.getVerticalScrollBar().setUI(new BasicScrollBarUI(){
+            @Override
+            protected void configureScrollBarColors(){
+                this.thumbColor = Color.GRAY;
+            }
+
+            @Override
+            protected JButton createDecreaseButton(int orientation)  {
+                return new BasicArrowButton(orientation,
+                                    UIManager.getColor(Color.GRAY),
+                                    UIManager.getColor(Color.GRAY),
+                                    UIManager.getColor("ScrollBar.thumbDarkShadow"),
+                                    UIManager.getColor(Color.GRAY));
+            }
+
+            @Override
+            protected JButton createIncreaseButton(int orientation)  {
+                return new BasicArrowButton(orientation,
+                        UIManager.getColor(Color.GRAY),
+                        UIManager.getColor(Color.GRAY),
+                        UIManager.getColor("ScrollBar.thumbDarkShadow"),
+                        UIManager.getColor(Color.GRAY));
+            }
+        });
+        JPanel panel = new JPanel();
+        panel.setBackground(Color.DARK_GRAY);
+        memoryScrollPane.setCorner(JScrollPane.UPPER_RIGHT_CORNER, panel);
         memoryScrollPane.setMaximumSize(new Dimension(200, 700));
 
-        timer = new Timer(1000, e -> {
-            stepButtonListener();
-        });
+        timer = new Timer(1000, e -> stepButtonListener());
 
         layout = new GroupLayout(getContentPane());
         initComponents();
@@ -183,8 +279,10 @@ public class GUI extends JFrame {
 
         setDummyInstructions();
 
+        getContentPane().setBackground(Color.DARK_GRAY);
         getContentPane().setLayout(layout);
         getContentPane().setPreferredSize(new Dimension(800, 700));
+        setJMenuBar(menuBar);
         layout.setAutoCreateGaps(true);
         layout.setAutoCreateContainerGaps(true);
 
@@ -232,9 +330,7 @@ public class GUI extends JFrame {
                                 .addComponent(reLabel)
                                 .addComponent(reValueLabel)
                                 .addGap(30))
-                        .addGap(70)
-                        .addComponent(opModeComboBox)
-                        .addGap(30)
+                        .addGap(130)
                         .addComponent(runButton)
                         .addGap(30)
                         .addComponent(cleanButton)
@@ -280,9 +376,7 @@ public class GUI extends JFrame {
                                 .addComponent(reLabel)
                                 .addComponent(reValueLabel)
                                 .addGap(30))
-                        .addGap(70)
-                        .addComponent(opModeComboBox)
-                        .addGap(30)
+                        .addGap(130)
                         .addComponent(runButton)
                         .addGap(30)
                         .addComponent(cleanButton)
@@ -297,17 +391,18 @@ public class GUI extends JFrame {
 
     private void stepButtonListener() {
 
-        highlight();
+        highlight(executionColor);
 
         try {
             cpu.execute(mem);
         } catch (Exception e) {
             consoleArea.append("\n" + e.getMessage() + "\n");
-            if (opModeComboBox.getSelectedIndex() == 0) {
+            highlight(errorColor);
+            if (continuousOp.isSelected()) {
                 runButton.setEnabled(true);
                 timer.stop();
             }
-            opModeComboBox.setEnabled(true);
+            setOperationState(true, true);
             isLoading = true;
             currentInstructions = new String[0];
             cleanButton.setEnabled(true);
@@ -349,12 +444,12 @@ public class GUI extends JFrame {
         }
 
         cleanButton.setEnabled(false);
-        opModeComboBox.setEnabled(false);
+        setOperationState(false, false);
         textArea.setEditable(false);
 
-        if (opModeComboBox.getSelectedIndex() == 0) runButton.setEnabled(false);
+        if (continuousOp.isSelected()) runButton.setEnabled(false);
 
-        if (opModeComboBox.getSelectedIndex() == 0) {
+        if (continuousOp.isSelected()) {
             timer.start();
         } else {
             stepButtonListener();
@@ -362,17 +457,24 @@ public class GUI extends JFrame {
 
     }
 
-    private void highlight() {
+    private void highlight(DefaultHighlighter.DefaultHighlightPainter color) {
 
         highlighter.removeAllHighlights();
         try {
             highlighter.addHighlight(
                     textArea.getLineStartOffset(currentLine),
                     textArea.getLineEndOffset(currentLine),
-                    painter);
+                    color);
         } catch (BadLocationException e) {
             e.printStackTrace();
         }
+
+    }
+
+    private void setOperationState(boolean c, boolean d) {
+
+        continuousOp.setEnabled(c);
+        debugOp.setEnabled(d);
 
     }
 
@@ -391,7 +493,7 @@ public class GUI extends JFrame {
     private void refresh() {
 
         cleanButton.setEnabled(true);
-        opModeComboBox.setEnabled(true);
+        setOperationState(true, true);
         opModeListener();
         textArea.setEditable(true);
 
@@ -416,7 +518,7 @@ public class GUI extends JFrame {
 
     private void opModeListener() {
 
-        if (opModeComboBox.getSelectedIndex() == 0) {
+        if (continuousOp.isSelected()) {
 
             mopValueLabel.setText("00000000");
             runButton.setEnabled(true);
@@ -459,22 +561,16 @@ public class GUI extends JFrame {
 
     private void fillCurrentLineMap() {
 
-        Integer pc = 13;
-        Integer line = 0;
+        int pc = 13;
+        int line = 0;
 
         for(String instruction : currentInstructions) {
             loader.loadAllWordsFromString(instruction);
             currentLineMap.put(bitsPadding(pc), line);
             switch (instruction.length()) {
-                case 16:
-                    pc += 1;
-                    break;
-                case 32:
-                    pc += 2;
-                    break;
-                case 48:
-                    pc += 3;
-                    break;
+                case 16 -> pc += 1;
+                case 32 -> pc += 2;
+                case 48 -> pc += 3;
             }
             line++;
         }
@@ -489,7 +585,7 @@ public class GUI extends JFrame {
         textArea.append("00000000000000000000000000001111\n");
         textArea.append("00000000010000100000000000001111\n");
         textArea.append("0000000000001011\n");
-        /*textArea.setText("00000000010000100000000000001011\n");
+/*        textArea.setText("00000000010000100000000000001011\n");
         textArea.append("00000000010011100000000000000100\n");
         textArea.append("00000000000001110000000000011111\n");
         textArea.append("00000000010001100000000000011110\n");
