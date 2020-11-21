@@ -61,7 +61,7 @@ public class Cpu {
     }
 
     /**
-     * convert short to string in binary
+     * convert positive short to string in binary (in this case is necessary to fill with 0's on the left to complete 16 bits)
      * @param reg short
      * @return String in binary
      */
@@ -75,7 +75,7 @@ public class Cpu {
     }
 
     /**
-     * convert short to String (binary)
+     * convert short (both positive and negative) to String (binary)
      * @param reg
      * @return
      */
@@ -87,7 +87,7 @@ public class Cpu {
             res = bin.substring(16, 32);
         }
         else{
-            res = bitsPadding(reg);
+            res = bitsPadding(reg);     //uses the bitsPadding function if postive
         }
         return res;
     }
@@ -129,7 +129,6 @@ public class Cpu {
 
     public boolean execute(Memory mem) throws IllegalArgumentException {
         ri = read(mem);
-        re = "0000000000000000";
         String value;  //get values from data memory
         short operation;
 /**
