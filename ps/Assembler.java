@@ -17,17 +17,14 @@ public class Assembler {
         symbolTable = new HashMap<>();
         oppcodeTable = new HashMap<>();
         lines = new ArrayList<>();
-
         locationCounter = 0;
-
         oppcodeTable = mapOppcode(oppcodeTable);
-
         readFile(adress);
-
-
+        firstStep();
+        secondStep(adress);
     }
 
-    private void readFile(String adress){
+ private void readFile(String adress){
         try{
             BufferedReader lerArq;
 
@@ -45,72 +42,91 @@ public class Assembler {
     }
 
 
-    private void firstStep(String adress){
+    private void firstStep(){
         String oppCode;
 
         for (String line: lines) {
-
-
-            aux = line.split(" ");
-            oppCode = oppcodeTable.get(getOperation(aux));// get oppCode
-
-
-            if(!getLabel(aux).equals(null)) {
-                symbolTable.put(getLabel(aux), locationCounter);
-            }
-
-            if(getOperation(aux).equals("end")){return;}
-
-            if(!oppCode.equals(null)){
+            aux = line.split("  ");
+            oppCode = getOperation(aux); // get oppCode
+            if(oppcodeTable.containsKey(oppCode)){
+                if(getLabel(aux) != null) {
+                    symbolTable.put(getLabel(aux), locationCounter);
+                }
                 locationCounter += getOperands(aux).size() + 1;
-
             }
-            else if(true){/* verify psedo map TODO*/}
-
-            else{throw new IllegalArgumentException("instruction not found");}
+            else if(oppCode.equals("end")){
+                return;
+            }
+            else if(oppCode.equals("space") || oppCode.equals("const")){
+                symbolTable.put(getLabel(aux), locationCounter);
+                locationCounter += 1;
+            }
+            
+            //TODO
+            
+            else{
+                throw new IllegalArgumentException("Operator not found");
+            }
         }
-
+        throw new IllegalArgumentException("Operator END not found");
     }
 
-    private void secondStep(){
+    private void secondStep(String adress){
         ArrayList<String> byLine = new ArrayList<>();
-        String oppcode, pointer = new String(), opp = new String();
+        String pointer, opp = new String();
         ArrayList<String> operands;
-
+        locationCounter = 0;
+        
         for (String line: lines) {
             operands = getOperands(aux);
 
-            aux = line.split(" ");
+            aux = line.split("  ");
 
 
             pointer = adress(operands);
-            pointer.concat(oppcodeTable.get(getOperation(aux)));// get oppCode);
+            pointer = pointer.concat(oppcodeTable.get(getOperation(aux))); // get oppCode);
 
             for (String operand: operands) {
 
                 if (operand.charAt(0) == '#' || operand.charAt(0) == 'I') {// if has pointer
-                    opp.concat(operand.substring(1));
+                    opp = opp.concat(operand.substring(1));
                 }
                 else if (isNumeric(operand)) { // if dont have pointer
-                    opp.concat(operand);
+                    opp = opp.concat(operand);
                 }
                 else { // if is label
-                    opp.concat(Integer.toString(symbolTable.get(operand), 2));
+                    opp = opp.concat(Integer.toString(symbolTable.get(operand), 2));
                 }
             }
 
-            pointer.concat(opp);
+            pointer = pointer.concat(opp);
             byLine.add(pointer);
         }
-        generateObjectFile(byLine);
+        generateObjectFile(byLine, adress);
     }
 
-    private void generateObjectFile(ArrayList<String> lins){
-        //genarate file TODO
+    private void generateObjectFile(ArrayList<String> lins, String adress){
+        File arq = new File(adress.split(".")[0].concat(".obj"));
+        try{
+            arq.createNewFile();
+            FileWriter fileWriter = new FileWriter(arq, false);
+            PrintWriter printWriter = new PrintWriter(fileWriter);
+            for(String lin : lins) {
+                printWriter.println(lin);
+            }
+            printWriter.close();
+        }
+        catch(IOException e){
+            System.out.println("error on creating file!"); 
+        }
+    }
+    
+    private void generateListingFile(String adress){
+        //TODO
     }
 
 
-    String adress(ArrayList<String> operands){
+    private String adress(ArrayList<String> operands){
         if(operands.size() == 1){return "";}//TODO
         else if(operands.size() == 2){return "";}//TODO
         else return "000";
@@ -168,6 +184,5 @@ public class Assembler {
             return false;
         }
     }
-
 
 }
