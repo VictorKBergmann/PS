@@ -1,17 +1,21 @@
 package macro;
 
 import java.io.*;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Stack;
 
-public class ProcessadorDeMacro{
+public class ProcessadorDeMacro {
     private InputStreamReader input;
     private String adress;
     private String newAdress;
+
+    private ArrayList<Integer> startPos;
+    private ArrayList<Integer> finalPos;
     private ArrayList<String> nameTab = new ArrayList<>();
     private ArrayList<String> defTab = new ArrayList<>();
+    private ArrayList<String> finalArch = new ArrayList<>();
+
+
+
 
 
     //private ArrayList<ArgTab> argTab;
@@ -20,7 +24,8 @@ public class ProcessadorDeMacro{
         this.adress = adress;
     }
 
-    public void oneStepMacroProcessor() {
+    public void oneStepMacroProcessor( ) {
+        readFile(adress);
         String line;
 
         BufferedReader buffer = new BufferedReader(input);
@@ -32,14 +37,19 @@ public class ProcessadorDeMacro{
         } catch (IOException e) {
             e.printStackTrace();
         }
+
         try {
             line = buffer.readLine();
             while(!(line.equals("END"))){
 
-                //System.out.println(line);
                 processLine(line, buffer);
                 line = buffer.readLine();
             }
+            finalArch.add(line);
+            for (int i = 0; i < finalArch.size(); i++){
+                System.out.println(finalArch.get(i));
+            }
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -47,38 +57,40 @@ public class ProcessadorDeMacro{
     }
 
     public void processLine(String line, BufferedReader buffer){
+        String oppCode = getOppCode(line);
 
-        for(int a =0; a<nameTab.size(); ++a){
-            if(getOppCode(nameTab.get(a)).equals(getOppCode(line)) ){
-                //expand();
-            }
-            else if(getOppCode(line).equals("MACRO")){
-
-                definitionMode(line, buffer);
-            }
-            else{
-                writeFile(newAdress, line);
-            }
+        if(searchNameTab(oppCode)){
+            //expand();
         }
+        else if(line.equals("MACRO")){
+            definitionMode(line, buffer);
+        }
+        else{
+            finalArch.add(line);
+           // writeFile(newAdress, line);
+        }
+
+
     }
 
     public void definitionMode(String line, BufferedReader buffer ){
         try {
             line = buffer.readLine();
-            nameTab.add(getOppCode(line));
-            defTab.add(line);
+            nameTab.add(getOppCode(line)); //entering macro NAME into name table
+            defTab.add(line); //entering macro prototype into definition table
+            //startPos.add(defTab.size()); //entering the start position of macro call in nametable
             int level = 1;
 
             while(level>0){
-                line = buffer.readLine();
-
+                line = buffer.readLine(); //geting line
+                //TODO -> substituir notações pelos parametros
+                defTab.add(line); //entering line into definition table
                 if (line.equals("MACRO")) {
                     level++;
                 }
                 else if (line.equals("MEND")) {
                     --level;
                 }
-
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -89,7 +101,6 @@ public class ProcessadorDeMacro{
             try{
                 FileInputStream file  = new FileInputStream(adress);
                 input = new InputStreamReader(file); //""
-
             }
             catch(Exception error){
                 System.out.println("Error on file reading "+ adress + " .");
@@ -150,6 +161,14 @@ public class ProcessadorDeMacro{
         return line;
     }
 
+    public boolean searchNameTab(String macroName){
+        for(int a =0; a<nameTab.size(); ++a){
+            if(getOppCode(nameTab.get(a)).equals(macroName) ){
+                return true;
+            }
+        }
+        return false;
+    }
 
 
 
