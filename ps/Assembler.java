@@ -8,9 +8,8 @@ public class Assembler {
     private ArrayList<String> lines;
     private String line;
     private HashMap<String, Integer> symbolTable;
-    private Map<String, String> oppcodeTable;
+    private Map<String, String> oppcodeTable; 
     private String[] aux;
-
     private int locationCounter;
 
     public Assembler(String adress){
@@ -21,10 +20,10 @@ public class Assembler {
         oppcodeTable = mapOppcode(oppcodeTable);
         readFile(adress);
         firstStep();
-        secondStep(adress);
+        secondStep(adress);;
     }
 
- private void readFile(String adress){
+     private void readFile(String adress){
         try{
             BufferedReader lerArq;
 
@@ -46,7 +45,7 @@ public class Assembler {
         String oppCode;
 
         for (String line: lines) {
-            aux = line.split("  ");
+            aux = line.split("	");
             oppCode = getOperation(aux); // get oppCode
             if(oppcodeTable.containsKey(oppCode)){
                 if(getLabel(aux) != null) {
@@ -59,7 +58,7 @@ public class Assembler {
             }
             else if(oppCode.equals("space") || oppCode.equals("const")){
                 symbolTable.put(getLabel(aux), locationCounter);
-                locationCounter += 1;
+                locationCounter++;
             }
             
             //TODO
@@ -73,40 +72,60 @@ public class Assembler {
 
     private void secondStep(String adress){
         ArrayList<String> byLine = new ArrayList<>();
-        String pointer, opp = new String();
+        String fill = "000000000";
+        String opp = new String();
+        String pointer = new String();
+        String operation;
         ArrayList<String> operands;
         locationCounter = 0;
         
         for (String line: lines) {
+            aux = line.split("	");
+            operation = getOperation(aux);
             operands = getOperands(aux);
-
-            aux = line.split("  ");
-
-
-            pointer = adress(operands);
-            pointer = pointer.concat(oppcodeTable.get(getOperation(aux))); // get oppCode);
-
-            for (String operand: operands) {
-
-                if (operand.charAt(0) == '#' || operand.charAt(0) == 'I') {// if has pointer
-                    opp = opp.concat(operand.substring(1));
-                }
-                else if (isNumeric(operand)) { // if dont have pointer
-                    opp = opp.concat(operand);
-                }
-                else { // if is label
-                    opp = opp.concat(Integer.toString(symbolTable.get(operand), 2));
-                }
+            switch (operation) {
+                case "const":
+                    pointer = toString((short)locationCounter);
+                    pointer = pointer.concat(toString(Short.parseShort(operands.get(0))));
+                    locationCounter++;
+                    break;
+                case "space":
+                    locationCounter++;
+                    break;
+                case "end":
+                    generateObjectFile(byLine, adress);
+                    return;
+                default:
+                    pointer = toString((short)locationCounter);
+                    pointer = pointer.concat(fill);
+                    pointer = pointer.concat(getAdress(operands));
+                    pointer = pointer.concat(oppcodeTable.get(getOperation(aux)));
+                    for (String operand: operands) {
+                        
+                        if (operand.startsWith("#")) {
+                            opp = operand.substring(1);
+                        }
+                        if(operand.endsWith("I")) {
+                            opp = operand.substring(0, operand.length() - 1);
+                        }
+                        if (isNumeric(operand)) {
+                            opp = operand;
+                        }
+                        else { // if is label
+                            opp = Integer.toString(symbolTable.get(opp));
+                        }
+                        opp = toString(Short.parseShort(opp));
+                        pointer = pointer.concat(opp);
+                    }
+                    locationCounter += getOperands(aux).size() + 1;
+                    break;
             }
-
-            pointer = pointer.concat(opp);
             byLine.add(pointer);
-        }
-        generateObjectFile(byLine, adress);
+        }       
     }
 
     private void generateObjectFile(ArrayList<String> lins, String adress){
-        File arq = new File(adress.split(".")[0].concat(".obj"));
+        File arq = new File(adress.split("[.]")[0].concat(".obj"));
         try{
             arq.createNewFile();
             FileWriter fileWriter = new FileWriter(arq, false);
@@ -126,15 +145,42 @@ public class Assembler {
     }
 
 
-    private String adress(ArrayList<String> operands){
-        if(operands.size() == 1){return "";}//TODO
-        else if(operands.size() == 2){return "";}//TODO
-        else return "000";
+    private String getAdress(ArrayList<String> operands){
+        switch (operands.size()) {
+            case 1:
+                if(operands.get(0).startsWith("#")) {
+                    return "100";
+                }
+                else if(operands.get(0).endsWith("I")) {
+                    return "001";
+                }
+                else{
+                    return "000";
+                }
+            case 2:
+                if(operands.get(0).endsWith("I") && operands.get(1).endsWith("I")){
+                    return "011";
+                }
+                else if(operands.get(0).endsWith("I") && operands.get(1).startsWith("#")){
+                    return "101";
+                }
+                else if(operands.get(0).endsWith("I")){
+                    return "001";
+                }
+                else if(operands.get(1).startsWith("#")){
+                    return "100";
+                }
+                else if(operands.get(1).endsWith("I")){
+                    return "010";
+                }
+                else{
+                    return "000";
+                }
+            default:
+                return "000";
+        }
     }
-    // # = imediato
-    // I = indireto
-    //   = direto
-
+    
     private String getLabel(String[] line) {
         if(!line[0].equals("")){
             return line[0];
@@ -185,4 +231,25 @@ public class Assembler {
         }
     }
 
+    private String bitsPadding(short reg) {
+        String temp2 = Integer.toString(reg,2);
+        String temp1 = "";
+        for (int i=16; i > temp2.length(); i--) {
+            temp1 += "0";
+        }
+        return temp1.concat(temp2);
+    }
+    
+    private String toString(short reg) {
+        String bin;
+        String res;
+        if(reg < 0){
+            bin = Integer.toBinaryString(reg);
+            res = bin.substring(16, 32);
+        }
+        else{
+            res = bitsPadding(reg);
+        }
+        return res;
+    }
 }
