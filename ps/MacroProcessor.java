@@ -8,14 +8,9 @@ public class ProcessadorDeMacro {
     private String adress;
     private String newAdress;
 
-    private ArrayList<Integer> startPos;
-    private ArrayList<Integer> finalPos;
-    private ArrayList<String> nameTab = new ArrayList<>();
+    private NameTab nameTab = new NameTab();
     private ArrayList<String> defTab = new ArrayList<>();
     private ArrayList<String> finalArch = new ArrayList<>();
-
-
-
 
 
     //private ArrayList<ArgTab> argTab;
@@ -59,7 +54,7 @@ public class ProcessadorDeMacro {
     public void processLine(String line, BufferedReader buffer){
         String oppCode = getOppCode(line);
 
-        if(searchNameTab(oppCode)){
+        if(nameTab.isInNameTab(oppCode)){
             //expand();
         }
         else if(line.equals("MACRO")){
@@ -67,16 +62,16 @@ public class ProcessadorDeMacro {
         }
         else{
             finalArch.add(line);
-           // writeFile(newAdress, line);
+            // writeFile(newAdress, line);
         }
-
 
     }
 
     public void definitionMode(String line, BufferedReader buffer ){
         try {
             line = buffer.readLine();
-            nameTab.add(getOppCode(line)); //entering macro NAME into name table
+            nameTab.addName(getOppCode(line)); //entering macro NAME into name table
+            nameTab.addStart(defTab.size());
             defTab.add(line); //entering macro prototype into definition table
             //startPos.add(defTab.size()); //entering the start position of macro call in nametable
             int level = 1;
@@ -92,19 +87,20 @@ public class ProcessadorDeMacro {
                     --level;
                 }
             }
+            nameTab.addEnd(defTab.size()-1);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public void readFile(String adress){
-            try{
-                FileInputStream file  = new FileInputStream(adress);
-                input = new InputStreamReader(file); //""
-            }
-            catch(Exception error){
-                System.out.println("Error on file reading "+ adress + " .");
-            }
+        try{
+            FileInputStream file  = new FileInputStream(adress);
+            input = new InputStreamReader(file); //""
+        }
+        catch(Exception error){
+            System.out.println("Error on file reading "+ adress + " .");
+        }
     }
     public void writeFile(String adress, String line){
         try {
@@ -145,11 +141,6 @@ public class ProcessadorDeMacro {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-       /* for (int i = 0; i < str.size(); i++){
-            System.out.println(str.get(i));
-        }*/
-
         return str;
     }
     public String getOppCode(String line){
@@ -160,16 +151,6 @@ public class ProcessadorDeMacro {
         }
         return line;
     }
-
-    public boolean searchNameTab(String macroName){
-        for(int a =0; a<nameTab.size(); ++a){
-            if(getOppCode(nameTab.get(a)).equals(macroName) ){
-                return true;
-            }
-        }
-        return false;
-    }
-
 
 
 }
