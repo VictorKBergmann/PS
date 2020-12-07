@@ -63,7 +63,7 @@ public class ProcessadorDeMacro {
             expansionMode(buffer, expanding);
         }
         else if(line.equals("MACRO")){
-            definitionMode(line, buffer);
+            definitionMode(line, buffer, expanding);
         }
         else{
             finalArch.add(line);
@@ -82,18 +82,58 @@ public class ProcessadorDeMacro {
         expanding = false;
     }
 
-    public void definitionMode(String line, BufferedReader buffer ){
+    public ArrayList<String> createParameters(String line){
+
+        ArrayList<String> parameters = new ArrayList<>();
+        char[] arrayChar = line.toCharArray();
+        StringBuilder sb = new StringBuilder();
+
+        for(int a = 0; a < arrayChar.length; ++a){
+
+            if(arrayChar[a] == '&'){
+                while(arrayChar[a] != ',' && a< arrayChar.length){
+
+                    sb.append(arrayChar[a]);
+                    ++a;
+                }
+
+                parameters.add(sb.toString());
+                sb = null;
+            }
+
+        }
+        /*while(line!=null) {
+            int firstIndex = line.indexOf("&");
+            int lastIndex = line.indexOf(",");
+            parameters.add(line.substring(firstIndex, lastIndex));
+            line.substring(lastIndex);
+        }
+        */
+        return parameters;
+    }
+
+    public String replaceParameters(String line, ArrayList<String> parameters, int level){
+
+        for(int count = 1; count < parameters.size()+1; ++count){
+
+            line = line.replaceAll(parameters.get(count-1), "#(" + level+ ", " + count+")");
+        }
+        return line;
+    }
+
+    public void definitionMode(String line, BufferedReader buffer, boolean expanding ){
         try {
-            line = buffer.readLine();
-            nameTab.addName(getOppCode(line)); //entering macro NAME into name table
-            nameTab.addStart(defTab.size());
+            line = getLine(expanding, buffer);
+            nameTab.addName(getOppCode(line)); //entering macro NAME into nameTab
+            nameTab.addStart(defTab.size()); //entering the start position of macro call in nameTab
             defTab.add(line); //entering macro prototype into definition table
-            //startPos.add(defTab.size()); //entering the start position of macro call in nametable
+
+
             int level = 1;
 
             while(level>0){
-                line = buffer.readLine(); //geting line
-                //TODO -> substituir notações pelos parametros
+                line = getLine(expanding, buffer);//getting line
+
                 defTab.add(line); //entering line into definition table
                 if (line.equals("MACRO")) {
                     level++;
