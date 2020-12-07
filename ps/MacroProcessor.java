@@ -5,27 +5,27 @@ import java.util.ArrayList;
 
 public class ProcessadorDeMacro {
     private InputStreamReader input;
-    private String adress;
-    private String newAdress;
+    private String address;
+    private String newAddress;
 
     private NameTab nameTab = new NameTab();
+    private ArgTab argTab = new ArgTab();
     private ArrayList<String> defTab = new ArrayList<>();
     private ArrayList<String> finalArch = new ArrayList<>();
 
 
-    //private ArrayList<ArgTab> argTab;
-
-    public ProcessadorDeMacro(String adress) {
-        this.adress = adress;
+    public ProcessadorDeMacro(String address) {
+        this.address = address;
     }
 
     public void oneStepMacroProcessor( ) {
-        readFile(adress);
+        readFile(address);
         String line;
+        boolean expanding = false;
 
         BufferedReader buffer = new BufferedReader(input);
-        File newFile = new File(generateNewAdress("MASMAPRG.ASM"));
-        newAdress = newFile.getAbsolutePath();
+        File newFile = new File(generateNewAddress("MASMAPRG.ASM"));
+        newAddress = newFile.getAbsolutePath();
 
         try {
             newFile.createNewFile();
@@ -34,37 +34,52 @@ public class ProcessadorDeMacro {
         }
 
         try {
-            line = buffer.readLine();
+            line = getLine(expanding, buffer);
             while(!(line.equals("END"))){
 
-                processLine(line, buffer);
-                line = buffer.readLine();
+                processLine(line, buffer, expanding);
+                line = getLine(expanding, buffer);
             }
             finalArch.add(line);
             for (int i = 0; i < finalArch.size(); i++){
                 System.out.println(finalArch.get(i));
             }
-
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
-
-    public void processLine(String line, BufferedReader buffer){
+    public String getLine(boolean expanding, BufferedReader buffer) throws IOException {
+        if(expanding == true){
+            return "defTab";
+        }
+        else{
+            return buffer.readLine();
+        }
+    }
+    public void processLine(String line, BufferedReader buffer, boolean expanding){
         String oppCode = getOppCode(line);
 
         if(nameTab.isInNameTab(oppCode)){
-            //expand();
+            expansionMode(buffer, expanding);
         }
         else if(line.equals("MACRO")){
             definitionMode(line, buffer);
         }
         else{
             finalArch.add(line);
-            // writeFile(newAdress, line);
+            // writeFile(newAddress, line);
         }
-
+    }
+    public void expansionMode (BufferedReader buffer, boolean expanding){
+        expanding = true;
+        int i = 0;
+        //set up arguments from macro invocation in ARGTAB
+        //write macro invocation to expanded file as comment
+        for(;defTab.get(i).equals("MEND"); i++){
+            //getLine();
+            processLine(defTab.get(i), buffer, expanding );
+        }
+        expanding = false;
     }
 
     public void definitionMode(String line, BufferedReader buffer ){
@@ -92,19 +107,26 @@ public class ProcessadorDeMacro {
             e.printStackTrace();
         }
     }
-
-    public void readFile(String adress){
+    public String getOppCode(String line){
+        for(int i = 0; i<line.length() ; i++){
+            if(line.charAt(i) == ' '){
+                return line.substring(0, i);
+            }
+        }
+        return line;
+    }
+    public void readFile(String address){
         try{
-            FileInputStream file  = new FileInputStream(adress);
+            FileInputStream file  = new FileInputStream(address);
             input = new InputStreamReader(file); //""
         }
         catch(Exception error){
-            System.out.println("Error on file reading "+ adress + " .");
+            System.out.println("Error on file reading "+ address + " .");
         }
     }
-    public void writeFile(String adress, String line){
+    public void writeFile(String address, String line){
         try {
-            PrintWriter archive = new PrintWriter(adress);
+            PrintWriter archive = new PrintWriter(address);
             archive.println(line);
             archive.close();
         } catch (FileNotFoundException fileNotFoundException) {
@@ -113,22 +135,22 @@ public class ProcessadorDeMacro {
 
     }
 
-    public String generateNewAdress(String newAdress){
+    public String generateNewAddress(String newAddress){
         int a;
-        for(a = adress.length(); a > 0; --a){
-            if(adress.charAt(a-1) == '/'){
+        for(a = address.length(); a > 0; --a){
+            if(address.charAt(a-1) == '/'){
                 String temp;
-                temp = adress.substring(a);
-                newAdress = adress.replaceFirst(temp, newAdress);
+                temp = address.substring(a);
+                newAddress = address.replaceFirst(temp, newAddress);
                 a = -1;
             }
         }
-        return newAdress;
+        return newAddress;
     }
     public ArrayList<String> createList (){
         ArrayList<String> str = new ArrayList<>();
         String line;
-        readFile(adress);
+        readFile(address);
 
         BufferedReader buffer = new BufferedReader(input);
 
@@ -143,14 +165,4 @@ public class ProcessadorDeMacro {
         }
         return str;
     }
-    public String getOppCode(String line){
-        for(int i = 0; i<line.length() ; i++){
-            if(line.charAt(i) == ' '){
-                return line.substring(0, i);
-            }
-        }
-        return line;
-    }
-
-
 }
