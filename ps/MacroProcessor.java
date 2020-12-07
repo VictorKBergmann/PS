@@ -41,9 +41,10 @@ public class ProcessadorDeMacro {
                 line = getLine(expanding, buffer);
             }
             finalArch.add(line);
-            for (int i = 0; i < finalArch.size(); i++){
-                System.out.println(finalArch.get(i));
+            for (int i = 0; i < defTab.size(); i++){
+                System.out.println(defTab.get(i));
             }
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -91,14 +92,18 @@ public class ProcessadorDeMacro {
         for(int a = 0; a < arrayChar.length; ++a){
 
             if(arrayChar[a] == '&'){
-                while(arrayChar[a] != ',' && a< arrayChar.length){
+                while(arrayChar[a] != ','){
 
                     sb.append(arrayChar[a]);
                     ++a;
+                    if(a >= arrayChar.length){
+                        --a;
+                        arrayChar[a] = ',';
+                    }
                 }
 
                 parameters.add(sb.toString());
-                sb = null;
+                sb.delete(0, sb.length());
             }
 
         }
@@ -128,13 +133,15 @@ public class ProcessadorDeMacro {
             nameTab.addStart(defTab.size()); //entering the start position of macro call in nameTab
             defTab.add(line); //entering macro prototype into definition table
 
+            ArrayList<String> parameters = createParameters(line);;
 
             int level = 1;
 
             while(level>0){
-                line = getLine(expanding, buffer);//getting line
 
-                defTab.add(line); //entering line into definition table
+                line = getLine(expanding, buffer);//getting line
+                defTab.add( replaceParameters(line, parameters, level) ); //entering line into definition table
+
                 if (line.equals("MACRO")) {
                     level++;
                 }
