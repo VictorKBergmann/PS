@@ -12,6 +12,7 @@ public class ProcessadorDeMacro {
     private ArgTab argTab = new ArgTab();
     private ArrayList<String> defTab = new ArrayList<>();
     private ArrayList<String> finalArch = new ArrayList<>();
+    private FormalParameterStack formalParameterStack = new FormalParameterStack();
 
 
     public ProcessadorDeMacro(String address) {
@@ -83,6 +84,35 @@ public class ProcessadorDeMacro {
         expanding = false;
     }
 
+    public void definitionMode(String line, BufferedReader buffer, boolean expanding ){
+        try {
+            line = buffer.readLine();
+            //line = getLine(expanding, buffer);
+            nameTab.addName(getOppCode(line)); //entering macro NAME into nameTab
+            nameTab.addStart(defTab.size()); //entering the start position of macro call in nameTab
+            defTab.add(line); //entering macro prototype into definition table
+
+            ArrayList<String> parameters = createParameters(line);
+
+            int level = 1;
+
+            while(level>0){
+
+                line = getLine(expanding, buffer);//getting line
+                defTab.add( replaceParameters(line, parameters, 1) ); //entering line into definition table
+
+                if (line.equals("MACRO")) {
+                    level++;
+                }
+                else if (line.equals("MEND")) {
+                    --level;
+                }
+            }
+            nameTab.addEnd(defTab.size()-1);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
     public ArrayList<String> createParameters(String line){
 
         ArrayList<String> parameters = new ArrayList<>();
@@ -92,7 +122,7 @@ public class ProcessadorDeMacro {
         for(int a = 0; a < arrayChar.length; ++a){
 
             if(arrayChar[a] == '&'){
-                while(arrayChar[a] != ','){
+                while(arrayChar[a] != ',' && arrayChar[a] != ' '){
 
                     sb.append(arrayChar[a]);
                     ++a;
@@ -124,35 +154,6 @@ public class ProcessadorDeMacro {
             line = line.replaceAll(parameters.get(count-1), "#(" + level+ ", " + count+")");
         }
         return line;
-    }
-
-    public void definitionMode(String line, BufferedReader buffer, boolean expanding ){
-        try {
-            line = getLine(expanding, buffer);
-            nameTab.addName(getOppCode(line)); //entering macro NAME into nameTab
-            nameTab.addStart(defTab.size()); //entering the start position of macro call in nameTab
-            defTab.add(line); //entering macro prototype into definition table
-
-            ArrayList<String> parameters = createParameters(line);;
-
-            int level = 1;
-
-            while(level>0){
-
-                line = getLine(expanding, buffer);//getting line
-                defTab.add( replaceParameters(line, parameters, level) ); //entering line into definition table
-
-                if (line.equals("MACRO")) {
-                    level++;
-                }
-                else if (line.equals("MEND")) {
-                    --level;
-                }
-            }
-            nameTab.addEnd(defTab.size()-1);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
     public String getOppCode(String line){
         for(int i = 0; i<line.length() ; i++){
