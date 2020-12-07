@@ -45,6 +45,9 @@ public class ProcessadorDeMacro {
             for (int i = 0; i < defTab.size(); i++){
                 System.out.println(defTab.get(i));
             }
+            for (int i = 0; i < nameTab.getSize(); i++){
+                System.out.println(nameTab.getName(i));
+            }
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -156,9 +159,18 @@ public class ProcessadorDeMacro {
         return line;
     }
     public String getOppCode(String line){
-        for(int i = 0; i<line.length() ; i++){
+        int j = 0;
+        if(line.charAt(j) == '&'){
+
+            while(line.charAt(j) != ' ' && j < line.length()){
+                ++j;
+            }
+            ++j;
+        }
+        for(int i = j; i<line.length() ; i++){
+
             if(line.charAt(i) == ' '){
-                return line.substring(0, i);
+                return line.substring(j, i);
             }
         }
         return line;
