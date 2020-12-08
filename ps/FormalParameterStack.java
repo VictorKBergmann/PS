@@ -27,6 +27,14 @@ public class FormalParameterStack {
     public int size (){
         return name.size();
     }
+    public int getLastLevel(){
+        if(name.isEmpty()){
+            return 0;
+        }
+        else{
+            return definitionPositionAndLevelPair.get(definitionPositionAndLevelPair.size()-1)[0];
+        }
+    }
     public int getHighDLevel(String parameter){
 
         int index = name.lastIndexOf(parameter);
@@ -46,6 +54,15 @@ public class FormalParameterStack {
     }
     public int getDLevel(int index){
         return definitionPositionAndLevelPair.get(index)[0];
+    }
+
+    public void popLastLevel(){
+        int level = getDLevel(name.size()-1);
+
+        while(!(name.isEmpty()) && definitionPositionAndLevelPair.get(name.size()-1)[0] == level){
+            definitionPositionAndLevelPair.remove(name.size()-1);
+            name.remove(name.size()-1);
+        }
     }
 
     public Integer[] getDefinitionPositionAndLevelPair(String name){
