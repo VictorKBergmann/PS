@@ -3,7 +3,7 @@ package macro;
 import java.io.*;
 import java.util.ArrayList;
 
-public class ProcessadorDeMacro {
+public class MacroProcessor {
     private InputStreamReader input;
     private String address;
     private String newAddress;
@@ -13,16 +13,18 @@ public class ProcessadorDeMacro {
     private ArrayList<String> defTab = new ArrayList<>();
     private ArrayList<String> finalArch = new ArrayList<>();
     private FormalParameterStack formalParameterStack = new FormalParameterStack();
+    private boolean expanding;
+    private int indexDefTab;
 
-
-    public ProcessadorDeMacro(String address) {
+    public MacroProcessor(String address) {
         this.address = address;
     }
 
     public void oneStepMacroProcessor( ) {
         readFile(address);
         String line;
-        boolean expanding = false;
+        expanding = false;
+        indexDefTab = 0;
 
         BufferedReader buffer = new BufferedReader(input);
         File newFile = new File(generateNewAddress("MASMAPRG.ASM"));
@@ -35,72 +37,36 @@ public class ProcessadorDeMacro {
         }
 
         try {
-            line = getLine(expanding, buffer);
-            while(!(line.equals("END"))){
+            line = getLine(buffer);
 
-                processLine(line, buffer, expanding);
-                line = getLine(expanding, buffer);
+            while(!(line.equals("END"))){
+                processLine(line, buffer);
+                line = getLine(buffer);
             }
             finalArch.add(line);
-            for (int i = 0; i < defTab.size(); i++){
-                System.out.println(defTab.get(i));
-            }
-            for (int i = 0; i < nameTab.getSize(); i++){
-                System.out.println(nameTab.getName(i));
+
+            for (int i = 0; i < finalArch.size(); i++){
+                System.out.println(finalArch.get(i));
             }
 
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-    public String getLine(boolean expanding, BufferedReader buffer) throws IOException {
-        if(expanding == true){
-            return "defTab";
-        }
-        else{
-            return buffer.readLine();
-        }
-    }
-    public void processLine(String line, BufferedReader buffer, boolean expanding){
-        String oppCode = getOppCode(line);
 
-        if(nameTab.isInNameTab(oppCode)){
-            expansionMode(buffer, expanding);
-        }
-        else if(line.equals("MACRO")){
-            definitionMode(line, buffer, expanding);
-        }
-        else{
-            finalArch.add(line);
-            // writeFile(newAddress, line);
-        }
-    }
-    public void expansionMode (BufferedReader buffer, boolean expanding){
-        expanding = true;
-        int i = 0;
-        //set up arguments from macro invocation in ARGTAB
-        //write macro invocation to expanded file as comment
-        for(;defTab.get(i).equals("MEND"); i++){
-            //getLine();
-            processLine(defTab.get(i), buffer, expanding );
-        }
-        expanding = false;
-    }
-    public void definitionMode(String line, BufferedReader buffer, boolean expanding ){
+    public void definitionMode(String line, BufferedReader buffer){
         try {
-            line = buffer.readLine();
-            //line = getLine(expanding, buffer);
+            //line = buffer.readLine();
+            line = getLine(buffer);
             nameTab.addName(getOppCode(line)); //entering macro NAME into nameTab
             nameTab.addStart(defTab.size()); //entering the start position of macro call in nameTab
             defTab.add(line); //entering macro prototype into definition table
 
-
-
-            int level = 1;
             createParameters(line);
+            int level = 1;
             while(level>0){
 
-                line = getLine(expanding, buffer);//getting line
+                line = getLine(buffer);//getting line
                 defTab.add( replaceParameters(line) ); //entering line into definition table
 
                 if (line.equals("MACRO")) {
@@ -111,12 +77,80 @@ public class ProcessadorDeMacro {
                 }
             }
             nameTab.addEnd(defTab.size()-1);
-            formalParameterStack.popLastLevel();
+            //formalParameterStack.popLastLevel();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+    public void expansionMode (String line, BufferedReader buffer, String macroName) throws IOException {
+        expanding = true;
 
+        indexDefTab = nameTab.getStart(nameTab.indexOfName(macroName));
+        String macroPrototype = defTab.get(indexDefTab);
+
+        createArguments(line);  //set up arguments from macro invocation in ArgTAB
+        finalArch.add("*Comment: "+ macroPrototype); //write macro invocation to expanded file as comment
+
+        while(!(line.equals("MEND"))){
+            //++indexDefTab;
+            line = getLine(buffer);
+            processLine(line, buffer);
+        }
+
+        expanding = false;
+    }
+
+    public String getLine(BufferedReader buffer) throws IOException {
+        if(expanding){
+            ++indexDefTab;
+            return replaceArguments(defTab.get(indexDefTab));
+        }
+        else{
+            return buffer.readLine();
+        }
+    }
+    public void processLine(String line, BufferedReader buffer) throws IOException {
+        String oppCode = getOppCode(line);
+
+        if(nameTab.isInNameTab(oppCode)){
+            expansionMode(line, buffer, oppCode);
+        }
+        else if(line.equals("MACRO")){
+            definitionMode(line, buffer);
+        }
+        else{
+            finalArch.add(line);
+            // writeFile(newAddress, line);
+        }
+    }
+    public void createArguments(String line){
+        char[] arrayChar = line.toCharArray();
+        StringBuilder sb = new StringBuilder();
+
+        int a = 0;
+        while(arrayChar[a] != ' ') {
+            ++a;
+        }
+        for(a= a + 1 ; a < arrayChar.length; ++a){
+
+                while(arrayChar[a] != ',' && arrayChar[a] != ' '){
+
+                    sb.append(arrayChar[a]);
+                    ++a;
+                    if(a >= arrayChar.length){
+                        --a;
+                        arrayChar[a] = ',';
+                    }
+                }
+                argTab.add(sb.toString());
+                sb.delete(0, sb.length());
+            }
+
+    }
+    public String replaceArguments(String line){
+        //todo
+        return "todo";
+    }
     public void createParameters(String line){
 
         char[] arrayChar = line.toCharArray();
