@@ -8,7 +8,7 @@ public class Assembler {
     private ArrayList<String> lines;
     private String line;
     private HashMap<String, Integer> symbolTable;
-    private Map<String, String> oppcodeTable; 
+    private Map<String, String[]> oppcodeTable;
     private String[] aux;
     private int locationCounter;
 
@@ -17,13 +17,13 @@ public class Assembler {
         oppcodeTable = new HashMap<>();
         lines = new ArrayList<>();
         locationCounter = 0;
-        oppcodeTable = mapOppcode(oppcodeTable);
+        oppcodeTable = mapOppcode();
         readFile(adress);
         firstStep();
-        secondStep(adress);;
+        secondStep(adress);
     }
 
-     private void readFile(String adress){
+    private void readFile(String adress){
         try{
             BufferedReader lerArq;
 
@@ -45,10 +45,17 @@ public class Assembler {
         String oppCode;
 
         for (String line: lines) {
-            aux = line.split("	");
+            aux = line.split("\\s+"); //remove all spaces
             oppCode = getOperation(aux); // get oppCode
             if(oppcodeTable.containsKey(oppCode)){
+                if(!oppcodeTable.get(oppCode)[1].equals(Integer.toString(getOperands(aux).size()))) {
+                    throw new IllegalArgumentException("Syntax error");
+                }
                 if(getLabel(aux) != null) {
+                    labelValidator(getLabel(aux));
+                    if(symbolTable.containsKey(getLabel(aux))){
+                        throw new IllegalArgumentException("Duplicated label");
+                    }
                     symbolTable.put(getLabel(aux), locationCounter);
                 }
                 locationCounter += getOperands(aux).size() + 1;
@@ -57,6 +64,10 @@ public class Assembler {
                 return;
             }
             else if(oppCode.equals("space") || oppCode.equals("const")){
+                labelValidator(getLabel(aux));
+                if(symbolTable.containsKey(getLabel(aux))){
+                    throw new IllegalArgumentException("Duplicated label");
+                }
                 symbolTable.put(getLabel(aux), locationCounter);
                 locationCounter++;
             }
@@ -73,14 +84,13 @@ public class Assembler {
     private void secondStep(String adress){
         ArrayList<String> byLine = new ArrayList<>();
         String fill = "000000000";
-        String opp = new String();
-        String pointer = new String();
+        String pointer;
         String operation;
         ArrayList<String> operands;
         locationCounter = 0;
         
         for (String line: lines) {
-            aux = line.split("	");
+            aux = line.split("\\s+");
             operation = getOperation(aux);
             operands = getOperands(aux);
             switch (operation) {
@@ -90,6 +100,8 @@ public class Assembler {
                     locationCounter++;
                     break;
                 case "space":
+                    pointer = toString((short)locationCounter);
+                    pointer = pointer.concat(toString((short)0));
                     locationCounter++;
                     break;
                 case "end":
@@ -99,29 +111,36 @@ public class Assembler {
                     pointer = toString((short)locationCounter);
                     pointer = pointer.concat(fill);
                     pointer = pointer.concat(getAdress(operands));
-                    pointer = pointer.concat(oppcodeTable.get(getOperation(aux)));
+                    pointer = pointer.concat(oppcodeTable.get(getOperation(aux))[0]);
                     for (String operand: operands) {
                         
                         if (operand.startsWith("#")) {
-                            opp = operand.substring(1);
+                            operand = operand.substring(1);
                         }
                         if(operand.endsWith("I")) {
-                            opp = operand.substring(0, operand.length() - 1);
+                            operand = operand.substring(0, operand.length() - 1);
                         }
-                        if (isNumeric(operand)) {
-                            opp = operand;
+                        if (!isNumeric(operand)) {
+                            if(symbolTable.get(operand) == null){
+                                throw new IllegalArgumentException("Label not defined"); 
+                            }
+                            operand = Integer.toString(symbolTable.get(operand));
                         }
-                        else { // if is label
-                            opp = Integer.toString(symbolTable.get(opp));
-                        }
-                        opp = toString(Short.parseShort(opp));
-                        pointer = pointer.concat(opp);
+                        operand = toString(Short.parseShort(operand));
+                        pointer = pointer.concat(operand);
                     }
                     locationCounter += getOperands(aux).size() + 1;
                     break;
             }
             byLine.add(pointer);
         }       
+    }
+    
+    private boolean labelValidator(String label) {
+        if(label.matches("[A-Za-z0-9]+") && Character.isLetter(label.charAt(0)) && label.length() <= 8){
+            return true;
+        }
+        throw new IllegalArgumentException("Syntax error");
     }
 
     private void generateObjectFile(ArrayList<String> lins, String adress){
@@ -201,24 +220,24 @@ public class Assembler {
     }
 
 
-    private Map<String, String> mapOppcode(Map<String, String> pot) {
-        pot.put("br", "0000");
-        pot.put("brpos", "0001");
-        pot.put("add", "0010");
-        pot.put("load", "0011");
-        pot.put("brzero", "0100");
-        pot.put("brneg", "0101");
-        pot.put("sub", "0110");
-        pot.put("store", "0111");
-        pot.put("write", "1000");
-        pot.put("ret", "1001");
-        pot.put("divide", "1010");
-        pot.put("stop", "1011");
-        pot.put("read", "1100");
-        pot.put("copy", "1101");
-        pot.put("mult", "1110");
-        pot.put("call", "1111");
-        return pot;
+    private Map<String,String[]> mapOppcode() {
+        oppcodeTable.put("br", new String[]{"0000", "1"});
+        oppcodeTable.put("brpos", new String[]{"0001", "1"});
+        oppcodeTable.put("add", new String[]{"0010", "1"});
+        oppcodeTable.put("load", new String[]{"0011", "1"});
+        oppcodeTable.put("brzero", new String[]{"0100", "1"});
+        oppcodeTable.put("brneg", new String[]{"0101", "1"});
+        oppcodeTable.put("sub", new String[]{"0110", "1"});
+        oppcodeTable.put("store", new String[]{"0111", "1"});
+        oppcodeTable.put("write", new String[]{"1000", "1"});
+        oppcodeTable.put("ret", new String[]{"1001", "1"});
+        oppcodeTable.put("divide", new String[]{"1010", "1"});
+        oppcodeTable.put("stop", new String[]{"1011", "0"});
+        oppcodeTable.put("read", new String[]{"1100", "1"});
+        oppcodeTable.put("copy", new String[]{"1101", "2"});
+        oppcodeTable.put("mult", new String[]{"1110", "1"});
+        oppcodeTable.put("call", new String[]{"1111", "1"});
+        return oppcodeTable;
     }
 
 
