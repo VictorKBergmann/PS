@@ -40,4 +40,8 @@ public class NameTab {
         return false;
     }
 
+    public int indexOfName(String name){
+        return nameTab.indexOf(name);
+    }
+
 }
