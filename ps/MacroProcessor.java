@@ -15,6 +15,7 @@ public class MacroProcessor {
     private FormalParameterStack formalParameterStack = new FormalParameterStack();
     private boolean expanding;
     private int indexDefTab;
+    private String line;
 
     public MacroProcessor(String address) {
         this.address = address;
@@ -22,7 +23,6 @@ public class MacroProcessor {
 
     public void oneStepMacroProcessor( ) {
         readFile(address);
-        String line;
         expanding = false;
         indexDefTab = 0;
 
@@ -40,11 +40,16 @@ public class MacroProcessor {
             line = getLine(buffer);
 
             while(!(line.equals("END"))){
-                processLine(line, buffer);
+                processLine(buffer);
                 line = getLine(buffer);
             }
             finalArch.add(line);
 
+            System.out.println("DefTab: ");
+            for (int i = 0; i < defTab.size(); i++){
+                System.out.println(defTab.get(i));
+            }
+            System.out.println("Arquivo Final: ");
             for (int i = 0; i < finalArch.size(); i++){
                 System.out.println(finalArch.get(i));
             }
@@ -54,7 +59,7 @@ public class MacroProcessor {
         }
     }
 
-    public void definitionMode(String line, BufferedReader buffer){
+    public void definitionMode(BufferedReader buffer){
         try {
             //line = buffer.readLine();
             line = getLine(buffer);
@@ -82,7 +87,7 @@ public class MacroProcessor {
             e.printStackTrace();
         }
     }
-    public void expansionMode (String line, BufferedReader buffer, String macroName) throws IOException {
+    public void expansionMode (BufferedReader buffer, String macroName) throws IOException {
         expanding = true;
 
         indexDefTab = nameTab.getStart(nameTab.indexOfName(macroName));
@@ -94,7 +99,7 @@ public class MacroProcessor {
         while(!(line.equals("MEND"))){
             //++indexDefTab;
             line = getLine(buffer);
-            processLine(line, buffer);
+            processLine(buffer);
         }
 
         expanding = false;
@@ -109,14 +114,14 @@ public class MacroProcessor {
             return buffer.readLine();
         }
     }
-    public void processLine(String line, BufferedReader buffer) throws IOException {
+    public void processLine(BufferedReader buffer) throws IOException {
         String oppCode = getOppCode(line);
 
         if(nameTab.isInNameTab(oppCode)){
-            expansionMode(line, buffer, oppCode);
+            expansionMode(buffer, oppCode);
         }
         else if(line.equals("MACRO")){
-            definitionMode(line, buffer);
+            definitionMode(buffer);
         }
         else{
             finalArch.add(line);
@@ -149,7 +154,7 @@ public class MacroProcessor {
     }
     public String replaceArguments(String line){
         //todo
-        return "todo";
+        return line;
     }
     public void createParameters(String line){
 
@@ -193,6 +198,14 @@ public class MacroProcessor {
     }
     public String getOppCode(String line){
         int j = 0;
+
+        if(line.charAt(j) == '#'){
+
+            while(line.charAt(j) != ' ' && j < line.length()){
+                ++j;
+            }
+            ++j;
+        }
         if(line.charAt(j) == '&'){
 
             while(line.charAt(j) != ' ' && j < line.length()){
