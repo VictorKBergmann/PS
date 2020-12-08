@@ -86,7 +86,6 @@ public class ProcessadorDeMacro {
         }
         expanding = false;
     }
-
     public void definitionMode(String line, BufferedReader buffer, boolean expanding ){
         try {
             line = buffer.readLine();
@@ -95,14 +94,14 @@ public class ProcessadorDeMacro {
             nameTab.addStart(defTab.size()); //entering the start position of macro call in nameTab
             defTab.add(line); //entering macro prototype into definition table
 
-            ArrayList<String> parameters = createParameters(line);
+
 
             int level = 1;
-
+            createParameters(line, level);
             while(level>0){
 
                 line = getLine(expanding, buffer);//getting line
-                defTab.add( replaceParameters(line, parameters, 1) ); //entering line into definition table
+                defTab.add( replaceParameters(line) ); //entering line into definition table
 
                 if (line.equals("MACRO")) {
                     level++;
@@ -116,12 +115,12 @@ public class ProcessadorDeMacro {
             e.printStackTrace();
         }
     }
-    public ArrayList<String> createParameters(String line){
 
-        ArrayList<String> parameters = new ArrayList<>();
+    public void createParameters(String line, int level){
+
         char[] arrayChar = line.toCharArray();
         StringBuilder sb = new StringBuilder();
-
+        int position = 0;
         for(int a = 0; a < arrayChar.length; ++a){
 
             if(arrayChar[a] == '&'){
@@ -135,7 +134,7 @@ public class ProcessadorDeMacro {
                     }
                 }
 
-                parameters.add(sb.toString());
+                formalParameterStack.add(sb.toString(), level, ++position);
                 sb.delete(0, sb.length());
             }
 
@@ -147,14 +146,12 @@ public class ProcessadorDeMacro {
             line.substring(lastIndex);
         }
         */
-        return parameters;
     }
+    public String replaceParameters(String line){
 
-    public String replaceParameters(String line, ArrayList<String> parameters, int level){
+        for(int count = formalParameterStack.size()-1; count >= 0; --count){
 
-        for(int count = 1; count < parameters.size()+1; ++count){
-
-            line = line.replaceAll(parameters.get(count-1), "#(" + level+ ", " + count+")");
+            line = line.replaceAll(formalParameterStack.getName(count), "#(" + formalParameterStack.getDLevel(count)+ "," + formalParameterStack.getDPosition(count) +")");
         }
         return line;
     }
@@ -175,6 +172,7 @@ public class ProcessadorDeMacro {
         }
         return line;
     }
+
     public void readFile(String address){
         try{
             FileInputStream file  = new FileInputStream(address);
@@ -194,7 +192,6 @@ public class ProcessadorDeMacro {
         }
 
     }
-
     public String generateNewAddress(String newAddress){
         int a;
         for(a = address.length(); a > 0; --a){
