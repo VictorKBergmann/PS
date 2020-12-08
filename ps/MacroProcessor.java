@@ -97,7 +97,7 @@ public class ProcessadorDeMacro {
 
 
             int level = 1;
-            createParameters(line, level);
+            createParameters(line);
             while(level>0){
 
                 line = getLine(expanding, buffer);//getting line
@@ -111,16 +111,18 @@ public class ProcessadorDeMacro {
                 }
             }
             nameTab.addEnd(defTab.size()-1);
+            formalParameterStack.popLastLevel();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public void createParameters(String line, int level){
+    public void createParameters(String line){
 
         char[] arrayChar = line.toCharArray();
         StringBuilder sb = new StringBuilder();
         int position = 0;
+        int level = formalParameterStack.getLastLevel() + 1;
         for(int a = 0; a < arrayChar.length; ++a){
 
             if(arrayChar[a] == '&'){
