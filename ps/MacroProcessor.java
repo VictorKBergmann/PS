@@ -96,10 +96,17 @@ public class MacroProcessor {
         createArguments(line);  //set up arguments from macro invocation in ArgTAB
         finalArch.add("*Comment: "+ macroPrototype); //write macro invocation to expanded file as comment
 
-        while(!(line.equals("MEND"))){
+        int counter=1;
+        while(counter>0){
             //++indexDefTab;
             line = getLine(buffer);
+            if(line.equals("MACRO")){
+                counter= counter +1;
+            }
             processLine(buffer);
+            if(line.equals("MEND") ){
+                --counter;
+            }
         }
         argTab.clear();
         expanding = false;
