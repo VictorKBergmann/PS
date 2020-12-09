@@ -5,17 +5,17 @@ import java.util.ArrayList;
 public class ArgTab {
 
     private ArrayList<String> name = new ArrayList<>();
-    private ArrayList <Integer[]> position = new ArrayList<>();
+    private ArrayList<int[]> position = new ArrayList<>();
 
     public ArgTab(){
     }
-    public Integer[] findLastPosition(String name){
+    public int[] findLastPosition(String name){
 
         return position.get(this.name.lastIndexOf(name));
 
     }
     public void add(String name, int l, int p){
-        Integer[] temp = new Integer[1];
+        int[] temp = new int[2];
         temp[0]=l;
         temp[1]=p;
         this.name.add(name);
