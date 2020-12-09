@@ -21,7 +21,7 @@ public class MacroProcessor {
         this.address = address;
     }
 
-    public void oneStepMacroProcessor( ) {
+    public void MacroProcessor( ) {
         readFile(address);
         expanding = false;
         indexDefTab = 0;
@@ -131,25 +131,38 @@ public class MacroProcessor {
     public void createArguments(String line){
         char[] arrayChar = line.toCharArray();
         StringBuilder sb = new StringBuilder();
+        int position = 0;
 
         int a = 0;
         while(arrayChar[a] != ' ') {
             ++a;
         }
         for(a= a + 1 ; a < arrayChar.length; ++a){
-
-                while(arrayChar[a] != ',' && arrayChar[a] != ' '){
-
+            while(arrayChar[a] != ',' && arrayChar[a] != ' '){
+                if(arrayChar[a] == '#'){
+                    while(arrayChar[a-1] != ')') {
+                        sb.append(arrayChar[a]);
+                        a++;
+                        if (a == arrayChar.length){
+                            --a;
+                            arrayChar[a-1] = ')';
+                            arrayChar[a] = ' ';
+                        }
+                    }
+                }
+                else {
                     sb.append(arrayChar[a]);
                     ++a;
-                    if(a >= arrayChar.length){
+                    if (a >= arrayChar.length) {
                         --a;
                         arrayChar[a] = ',';
                     }
                 }
-                argTab.add(sb.toString());
-                sb.delete(0, sb.length());
             }
+            position++;
+            argTab.add(sb.toString(), 1, position);
+            sb.delete(0, sb.length());
+        }
 
     }
     public String replaceArguments(String line){
