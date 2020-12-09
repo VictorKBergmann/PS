@@ -9,12 +9,16 @@ public class Assembler {
     private String line;
     private HashMap<String, Integer> symbolTable;
     private Map<String, String[]> oppcodeTable;
+    private Map<String, ArrayList<Integer>> usageTable;
+    private Map<String, Integer> definitionTable;
     private String[] aux;
     private int locationCounter;
 
     public Assembler(String adress){
         symbolTable = new HashMap<>();
         oppcodeTable = new HashMap<>();
+        usageTable = new HashMap<>();
+        definitionTable = new HashMap<>();
         lines = new ArrayList<>();
         locationCounter = 0;
         oppcodeTable = mapOppcode();
@@ -56,7 +60,12 @@ public class Assembler {
                     if(symbolTable.containsKey(getLabel(aux))){
                         throw new IllegalArgumentException("Duplicated label");
                     }
-                    symbolTable.put(getLabel(aux), locationCounter);
+                    else if(definitionTable.containsKey(getLabel(aux))){
+                        definitionTable.put(getLabel(aux), locationCounter);
+                    }
+                    else{
+                        symbolTable.put(getLabel(aux), locationCounter);
+                    }
                 }
                 locationCounter += getOperands(aux).size() + 1;
             }
@@ -71,7 +80,14 @@ public class Assembler {
                 symbolTable.put(getLabel(aux), locationCounter);
                 locationCounter++;
             }
-            
+            else if(oppCode.equals("extdef")) {
+                labelValidator(getOperands(aux).get(0));
+                definitionTable.put(getOperands(aux).get(0), null);
+            }
+            else if(oppCode.equals("extr")) {
+                labelValidator(getLabel(aux));
+                usageTable.put(getLabel(aux), new ArrayList<>());  
+            }
             //TODO
             
             else{
@@ -98,15 +114,21 @@ public class Assembler {
                     pointer = toString((short)locationCounter);
                     pointer = pointer.concat(toString(Short.parseShort(operands.get(0))));
                     locationCounter++;
+                    byLine.add(pointer);
                     break;
                 case "space":
                     pointer = toString((short)locationCounter);
                     pointer = pointer.concat(toString((short)0));
                     locationCounter++;
+                    byLine.add(pointer);
                     break;
                 case "end":
                     generateObjectFile(byLine, adress);
                     return;
+                case "extdef":
+                    break;
+                case "extr":
+                    break;
                 default:
                     pointer = toString((short)locationCounter);
                     pointer = pointer.concat(fill);
@@ -120,19 +142,28 @@ public class Assembler {
                         if(operand.endsWith("I")) {
                             operand = operand.substring(0, operand.length() - 1);
                         }
-                        if (!isNumeric(operand)) {
-                            if(symbolTable.get(operand) == null){
-                                throw new IllegalArgumentException("Label not defined"); 
+                        if (!isNumeric(operand)) {   // is a label
+                            if(symbolTable.containsKey(operand)){
+                                operand = Integer.toString(symbolTable.get(operand));
                             }
-                            operand = Integer.toString(symbolTable.get(operand));
+                            else if(definitionTable.containsKey(operand)){
+                                operand = Integer.toString(definitionTable.get(operand));
+                            }
+                            else if(usageTable.containsKey(operand)){
+                                usageTable.get(operand).add(locationCounter + 1);
+                                operand = "0";
+                            }
+                            else{
+                                throw new IllegalArgumentException("Label not defined");
+                            }
                         }
                         operand = toString(Short.parseShort(operand));
                         pointer = pointer.concat(operand);
                     }
                     locationCounter += getOperands(aux).size() + 1;
+                    byLine.add(pointer);
                     break;
             }
-            byLine.add(pointer);
         }       
     }
     
