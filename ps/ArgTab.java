@@ -21,6 +21,15 @@ public class ArgTab {
         this.name.add(name);
         this.position.add(temp);
     }
+    public String getName(int index){
+        return name.get(index);
+    }
+    public void clear(){
+        name.clear();
+    }
+    public int size(){
+        return name.size();
+    }
     public void removeLast(){
         int index = name.size()-1;
         this.name.remove(index);
