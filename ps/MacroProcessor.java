@@ -72,7 +72,7 @@ public class MacroProcessor {
             while(level>0){
 
                 line = getLine(buffer);//getting line
-                defTab.add( replaceParameters(line) ); //entering line into definition table
+                defTab.add( replaceParameters(line) ); //entering line with positional notation into definition table
 
                 if (line.equals("MACRO")) {
                     level++;
@@ -82,7 +82,7 @@ public class MacroProcessor {
                 }
             }
             nameTab.addEnd(defTab.size()-1);
-            //formalParameterStack.popLastLevel();
+            formalParameterStack.popLastLevel();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -101,7 +101,7 @@ public class MacroProcessor {
             line = getLine(buffer);
             processLine(buffer);
         }
-
+        argTab.clear();
         expanding = false;
     }
 
@@ -128,7 +128,43 @@ public class MacroProcessor {
             // writeFile(newAddress, line);
         }
     }
+
     public void createArguments(String line){
+        char[] arrayChar = line.toCharArray();
+        StringBuilder sb = new StringBuilder();
+
+        int a = 0;
+        while(arrayChar[a] != ' ') {
+            ++a;
+        }
+        for(a= a + 1 ; a < arrayChar.length; ++a){
+            while(a< arrayChar.length && arrayChar[a] != ',' ){
+
+                sb.append(arrayChar[a]);
+                a++;
+
+            }
+            argTab.add(sb.toString(), -1, -1);
+            System.out.println(sb.toString());
+            sb.delete(0, sb.length());
+        }
+
+    }
+    public String replaceArguments(String line){
+        int temp = argTab.size();
+        String a;
+        for(int i = 0; i< temp; ++i){
+
+            a= "#(1," + (i+1) + ")";
+            while(line.contains(a)){
+                line = line.replace(a, argTab.getName(i));
+            }
+
+        }
+
+        return line;
+    }
+    public void createAr(String line){
         char[] arrayChar = line.toCharArray();
         StringBuilder sb = new StringBuilder();
         int position = 0;
@@ -165,10 +201,7 @@ public class MacroProcessor {
         }
 
     }
-    public String replaceArguments(String line){
-        //todo
-        return line;
-    }
+
     public void createParameters(String line){
 
         char[] arrayChar = line.toCharArray();
@@ -209,6 +242,7 @@ public class MacroProcessor {
         }
         return line;
     }
+
     public String getOppCode(String line){
         int j = 0;
 
