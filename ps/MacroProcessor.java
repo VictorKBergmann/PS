@@ -8,6 +8,7 @@ public class MacroProcessor {
     private String address;
     private String newAddress;
 
+    private int k = 0;
     private int expansionNumber = 0;
     private int inc = 0;
     private int counter;
@@ -138,6 +139,9 @@ public class MacroProcessor {
         String oppCode = getOppCode(line);
 
         if(nameTab.isInNameTab(oppCode)){
+            if(expanding == 0){
+                k = nameTab.getStart(nameTab.indexOfName(oppCode));
+            }
             expansionMode(buffer, oppCode);
         }
         else if(line.equals("MACRO")){
@@ -148,7 +152,7 @@ public class MacroProcessor {
             if(expanding > 1) {
                 inc++;
                 expanding--;
-                indexDefTab = temp.get(1) + inc;
+                indexDefTab = k + inc;
                 counter = 2;
                 if (expanding > 0)
                     expansionNumber++;
@@ -166,17 +170,26 @@ public class MacroProcessor {
         StringBuilder sb = new StringBuilder();
 
         int a = 0;
-        while(arrayChar[a] != ' ') {
+        if(arrayChar[a] == '&') {
+            while (arrayChar[a] != ' ' && arrayChar[a] != '\t')
+                a++;
+
+        }
+        while(arrayChar[a] == ' ' || arrayChar[a] == '\t')
+            a++;
+
+        while(arrayChar[a] != ' ' && arrayChar[a] != '\t') {
             ++a;
         }
         for(a= a + 1 ; a < arrayChar.length; ++a){
-            while(a< arrayChar.length && arrayChar[a] != ',' ){
+            while(a< arrayChar.length && (arrayChar[a] != ',' && arrayChar[a] != ' ' && arrayChar[a] != '\t')){
 
                 sb.append(arrayChar[a]);
                 a++;
 
             }
-            argTab.add(sb.toString(), -1, -1);
+            if (sb.toString() != "")
+                argTab.add(sb.toString(), -1, -1);
             System.out.println(sb.toString());
             sb.delete(0, sb.length());
         }
@@ -243,7 +256,7 @@ public class MacroProcessor {
         for(int a = 0; a < arrayChar.length; ++a){
 
             if(arrayChar[a] == '&'){
-                while(arrayChar[a] != ',' && arrayChar[a] != ' '){
+                while(arrayChar[a] != ',' && arrayChar[a] != ' ' && arrayChar[a] != '\t'){
 
                     sb.append(arrayChar[a]);
                     ++a;
@@ -278,23 +291,32 @@ public class MacroProcessor {
     public String getOppCode(String line){
         int j = 0;
 
-        if(line.charAt(j) == '#'){
+        if(line.charAt(j) == '#'){ //if its a parameter
 
-            while(line.charAt(j) != ' ' && j < line.length()){
+            while((line.charAt(j) != ' ' ||  line.charAt(j) != '\t')&& j < line.length()){
                 ++j;
             }
             ++j;
         }
-        if(line.charAt(j) == '&'){
+        else if(line.charAt(j) == '&'){ //if its a label
 
-            while(line.charAt(j) != ' ' && j < line.length()){
+            while((line.charAt(j) != ' ' &&  line.charAt(j) != '\t')&& j < line.length()){
                 ++j;
             }
             ++j;
+        }
+        else if(line.charAt(j) == '\t'){
+
+            while((line.charAt(j) == ' ' ||  line.charAt(j) == '\t')&& j < line.length()){
+                ++j;
+            }
+
         }
         for(int i = j; i<line.length() ; i++){
 
-            if(line.charAt(i) == ' '){
+            if(line.charAt(i) == ' ' || line.charAt(i) == '\t' || i+1 == line.length()){
+                if(i+1 == line.length())
+                    i++;
                 return line.substring(j, i);
             }
         }
