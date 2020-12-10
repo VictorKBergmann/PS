@@ -8,19 +8,14 @@ public class MacroProcessor {
     private String address;
     private String newAddress;
 
-    private int k = 0;
-    private int expansionNumber = 0;
-    private int inc = 0;
-    private int counter;
-    private ArrayList<Integer> temp = new ArrayList<>();
-    private int expanding;
     private NameTab nameTab = new NameTab();
     private ArgTab argTab = new ArgTab();
     private ArrayList<String> defTab = new ArrayList<>();
     private ArrayList<String> finalArch = new ArrayList<>();
     private FormalParameterStack formalParameterStack = new FormalParameterStack();
-    private int indexDefTab;
+    private int expanding;
     private String line;
+    private int indexDefTab =0;
 
     public MacroProcessor(String address) {
         this.address = address;
@@ -29,7 +24,6 @@ public class MacroProcessor {
     public void MacroProcessor( ) {
         readFile(address);
         expanding = 0;
-        indexDefTab = 0;
 
         BufferedReader buffer = new BufferedReader(input);
         File newFile = new File(generateNewAddress("MASMAPRG.ASM"));
@@ -50,10 +44,11 @@ public class MacroProcessor {
             }
             finalArch.add(line);
 
-           /* System.out.println("DefTab: ");
+            /*System.out.println("DefTab: ");
             for (int i = 0; i < defTab.size(); i++){
                 System.out.println(defTab.get(i));
-            }*/
+            }
+            */
             System.out.println("Arquivo Final: ");
             for (int i = 0; i < finalArch.size(); i++){
                 System.out.println(finalArch.get(i));
@@ -93,43 +88,30 @@ public class MacroProcessor {
         }
     }
     public void expansionMode (BufferedReader buffer, String macroName) throws IOException {
-        expanding++;
+        ++expanding;
 
+        int tempIndexDefTab = indexDefTab;
         indexDefTab = nameTab.getStart(nameTab.indexOfName(macroName));
-        temp.add(indexDefTab);//passar indexdeftab pra temp - tomar cuidado pra segunda chamada nao sobreescrever a primeira
         String macroPrototype = defTab.get(indexDefTab);
 
         createArguments(line);  //set up arguments from macro invocation in ArgTAB
         finalArch.add("*Comment: "+ macroPrototype); //write macro invocation to expanded file as comment
+
         line = getLine(buffer);
-        counter = 1;
-        while(counter>0){
-            //++indexDefTab;
+        while(!line.equals("MEND")){
 
-            if(line.equals("MACRO")){
-                counter= counter +1;
-            }
             processLine(buffer);
-
-            if(line.equals("MEND") ){
-                --counter;
-            }
-
             line = getLine(buffer);
-        }
-        argTab.clear();
-        expanding--;
-    }
 
+        }
+        indexDefTab = tempIndexDefTab;
+        argTab.clear();
+        --expanding;
+    }
     public String getLine(BufferedReader buffer) throws IOException {
-        if(expanding > 0){
+        if(expanding>0){
             ++indexDefTab;
             return replaceArguments(defTab.get(indexDefTab));
-        }
-        else if(expansionNumber != 0 && expanding < 0){
-            processLine(buffer);
-            expansionNumber--;
-            return buffer.readLine();
         }
         else{
             return buffer.readLine();
@@ -139,25 +121,10 @@ public class MacroProcessor {
         String oppCode = getOppCode(line);
 
         if(nameTab.isInNameTab(oppCode)){
-            if(expanding == 0){
-                k = nameTab.getStart(nameTab.indexOfName(oppCode));
-            }
             expansionMode(buffer, oppCode);
         }
         else if(line.equals("MACRO")){
             definitionMode(buffer);
-        }
-        else if(line.equals("MEND") && expanding > 0){
-            getLine(buffer);
-            if(expanding > 1) {
-                inc++;
-                expanding--;
-                indexDefTab = k + inc;
-                counter = 2;
-                if (expanding > 0)
-                    expansionNumber++;
-            }
-            else if(expanding <= 0) line = buffer.readLine();
         }
         else{
             finalArch.add(line);
@@ -322,6 +289,7 @@ public class MacroProcessor {
         }
         return line;
     }
+
 
     public void readFile(String address){
         try{
