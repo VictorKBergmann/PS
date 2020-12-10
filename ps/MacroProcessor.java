@@ -8,12 +8,12 @@ public class MacroProcessor {
     private String address;
     private String newAddress;
 
+    private boolean expanding;
     private NameTab nameTab = new NameTab();
     private ArgTab argTab = new ArgTab();
     private ArrayList<String> defTab = new ArrayList<>();
     private ArrayList<String> finalArch = new ArrayList<>();
     private FormalParameterStack formalParameterStack = new FormalParameterStack();
-    private boolean expanding;
     private int indexDefTab;
     private String line;
 
@@ -88,25 +88,28 @@ public class MacroProcessor {
         }
     }
     public void expansionMode (BufferedReader buffer, String macroName) throws IOException {
-        expanding = true;
+        expanding = (true);
 
         indexDefTab = nameTab.getStart(nameTab.indexOfName(macroName));
         String macroPrototype = defTab.get(indexDefTab);
 
         createArguments(line);  //set up arguments from macro invocation in ArgTAB
         finalArch.add("*Comment: "+ macroPrototype); //write macro invocation to expanded file as comment
-
-        int counter=1;
+        line = getLine(buffer);
+        int counter = 1;
         while(counter>0){
             //++indexDefTab;
-            line = getLine(buffer);
+
             if(line.equals("MACRO")){
                 counter= counter +1;
             }
             processLine(buffer);
+
             if(line.equals("MEND") ){
                 --counter;
             }
+
+            line = getLine(buffer);
         }
         argTab.clear();
         expanding = false;
@@ -129,6 +132,9 @@ public class MacroProcessor {
         }
         else if(line.equals("MACRO")){
             definitionMode(buffer);
+        }
+        else if(line.equals("MEND") && expanding){
+            getLine(buffer);
         }
         else{
             finalArch.add(line);
@@ -227,7 +233,7 @@ public class MacroProcessor {
                         arrayChar[a] = ',';
                     }
                 }
-
+                //if sb = &lab else
                 formalParameterStack.add(sb.toString(), level, ++position);
                 sb.delete(0, sb.length());
             }
