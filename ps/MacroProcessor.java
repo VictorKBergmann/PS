@@ -8,6 +8,7 @@ public class MacroProcessor {
     private String address;
     private String newAddress;
 
+    private int expansionNumber = 0;
     private int inc = 0;
     private int counter;
     private ArrayList<Integer> temp = new ArrayList<>();
@@ -48,10 +49,10 @@ public class MacroProcessor {
             }
             finalArch.add(line);
 
-            System.out.println("DefTab: ");
+           /* System.out.println("DefTab: ");
             for (int i = 0; i < defTab.size(); i++){
                 System.out.println(defTab.get(i));
-            }
+            }*/
             System.out.println("Arquivo Final: ");
             for (int i = 0; i < finalArch.size(); i++){
                 System.out.println(finalArch.get(i));
@@ -124,6 +125,11 @@ public class MacroProcessor {
             ++indexDefTab;
             return replaceArguments(defTab.get(indexDefTab));
         }
+        else if(expansionNumber != 0 && expanding < 0){
+            processLine(buffer);
+            expansionNumber--;
+            return buffer.readLine();
+        }
         else{
             return buffer.readLine();
         }
@@ -141,10 +147,13 @@ public class MacroProcessor {
             getLine(buffer);
             if(expanding > 1) {
                 inc++;
+                expanding--;
                 indexDefTab = temp.get(1) + inc;
                 counter = 2;
-                expanding--;
+                if (expanding > 0)
+                    expansionNumber++;
             }
+            else if(expanding <= 0) line = buffer.readLine();
         }
         else{
             finalArch.add(line);
