@@ -8,7 +8,10 @@ public class MacroProcessor {
     private String address;
     private String newAddress;
 
-    private boolean expanding;
+    private int inc = 0;
+    private int counter;
+    private ArrayList<Integer> temp = new ArrayList<>();
+    private int expanding;
     private NameTab nameTab = new NameTab();
     private ArgTab argTab = new ArgTab();
     private ArrayList<String> defTab = new ArrayList<>();
@@ -23,7 +26,7 @@ public class MacroProcessor {
 
     public void MacroProcessor( ) {
         readFile(address);
-        expanding = false;
+        expanding = 0;
         indexDefTab = 0;
 
         BufferedReader buffer = new BufferedReader(input);
@@ -88,15 +91,16 @@ public class MacroProcessor {
         }
     }
     public void expansionMode (BufferedReader buffer, String macroName) throws IOException {
-        expanding = (true);
+        expanding++;
 
         indexDefTab = nameTab.getStart(nameTab.indexOfName(macroName));
+        temp.add(indexDefTab);//passar indexdeftab pra temp - tomar cuidado pra segunda chamada nao sobreescrever a primeira
         String macroPrototype = defTab.get(indexDefTab);
 
         createArguments(line);  //set up arguments from macro invocation in ArgTAB
         finalArch.add("*Comment: "+ macroPrototype); //write macro invocation to expanded file as comment
         line = getLine(buffer);
-        int counter = 1;
+        counter = 1;
         while(counter>0){
             //++indexDefTab;
 
@@ -112,11 +116,11 @@ public class MacroProcessor {
             line = getLine(buffer);
         }
         argTab.clear();
-        expanding = false;
+        expanding--;
     }
 
     public String getLine(BufferedReader buffer) throws IOException {
-        if(expanding){
+        if(expanding > 0){
             ++indexDefTab;
             return replaceArguments(defTab.get(indexDefTab));
         }
@@ -133,8 +137,14 @@ public class MacroProcessor {
         else if(line.equals("MACRO")){
             definitionMode(buffer);
         }
-        else if(line.equals("MEND") && expanding){
+        else if(line.equals("MEND") && expanding > 0){
             getLine(buffer);
+            if(expanding > 1) {
+                inc++;
+                indexDefTab = temp.get(1) + inc;
+                counter = 2;
+                expanding--;
+            }
         }
         else{
             finalArch.add(line);
