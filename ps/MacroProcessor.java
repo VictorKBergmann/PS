@@ -38,7 +38,7 @@ public class MacroProcessor {
         try {
             line = getLine(buffer);
 
-            while(!(line.equals("END"))){
+            while(!(getOppCode(line).equals("END"))){
                 processLine(buffer);
                 line = getLine(buffer);
             }
@@ -74,10 +74,10 @@ public class MacroProcessor {
                 line = getLine(buffer);//getting line
                 defTab.add( replaceParameters(line) ); //entering line with positional notation into definition table
 
-                if (line.equals("MACRO")) {
+                if (getOppCode(line).equals("MACRO")) {
                     level++;
                 }
-                else if (line.equals("MEND")) {
+                else if (getOppCode(line).equals("MEND")) {
                     --level;
                 }
             }
@@ -94,11 +94,12 @@ public class MacroProcessor {
         indexDefTab = nameTab.getStart(nameTab.indexOfName(macroName));
         String macroPrototype = defTab.get(indexDefTab);
 
+       // argTab.clear();
         createArguments(line);  //set up arguments from macro invocation in ArgTAB
         finalArch.add("*Comment: "+ macroPrototype); //write macro invocation to expanded file as comment
 
         line = getLine(buffer);
-        while(!line.equals("MEND")){
+        while(!getOppCode(line).equals("MEND")){
 
             processLine(buffer);
             line = getLine(buffer);
@@ -123,7 +124,7 @@ public class MacroProcessor {
         if(nameTab.isInNameTab(oppCode)){
             expansionMode(buffer, oppCode);
         }
-        else if(line.equals("MACRO")){
+        else if(getOppCode(line).equals("MACRO")){
             definitionMode(buffer);
         }
         else{
@@ -272,7 +273,7 @@ public class MacroProcessor {
             }
             ++j;
         }
-        else if(line.charAt(j) == '\t'){
+        else if(line.charAt(j) == '\t' || line.charAt(j) == ' '){
 
             while((line.charAt(j) == ' ' ||  line.charAt(j) == '\t')&& j < line.length()){
                 ++j;
