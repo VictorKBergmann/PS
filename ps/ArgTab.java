@@ -5,35 +5,45 @@ import java.util.ArrayList;
 public class ArgTab {
 
     private ArrayList<String> name = new ArrayList<>();
-    private ArrayList<int[]> position = new ArrayList<>();
+    private ArrayList<Integer> sizeLastLevel = new ArrayList<>();
+
 
     public ArgTab(){
     }
-    public int[] findLastPosition(String name){
 
-        return position.get(this.name.lastIndexOf(name));
+    public void add(String name){
 
-    }
-    public void add(String name, int l, int p){
-        int[] temp = new int[2];
-        temp[0]=l;
-        temp[1]=p;
         this.name.add(name);
-        this.position.add(temp);
     }
-    public String getName(int index){
-        return name.get(index);
+    public void addSizeLastLevel(int size){
+        sizeLastLevel.add(size);
     }
-    public void clear(){
-        name.clear();
+    public String getName(int indexLastLevel){
+
+        return name.get(lastLevelIndex() + indexLastLevel);
     }
-    public int size(){
-        return name.size();
+
+    public String getArgsLastLevel(){
+        StringBuilder sb = new StringBuilder();
+        for(int i = lastLevelIndex(); i< name.size(); ++i){
+            sb.append( " " + name.get(i) );
+        }
+        return sb.toString();
     }
-    public void removeLast(){
-        int index = name.size()-1;
-        this.name.remove(index);
-        this.position.remove(index);
+    public int lastLevelIndex(){
+        return name.size() - getSizeLastLevel();
     }
+    public int getSizeLastLevel(){
+        return sizeLastLevel.get(sizeLastLevel.size() - 1);
+    }
+    public void popLastLevel(){
+        int size = getSizeLastLevel();
+
+        for(int i = name.size() -1 ; i> size; --i){
+            name.remove(i);
+        }
+        sizeLastLevel.remove(sizeLastLevel.size() - 1);
+    }
+
 
 }
