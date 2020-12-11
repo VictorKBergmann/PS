@@ -17,6 +17,7 @@ public class MacroProcessor {
     private String line;
     private int indexDefTab =0;
     String oppCode;
+    private int labelCount = 0;
 
     public MacroProcessor(String address) {
         this.address = address;
@@ -30,15 +31,17 @@ public class MacroProcessor {
         File newFile = new File(generateNewAddress("MASMAPRG.ASM"));
         newAddress = newFile.getAbsolutePath();
 
-
         try {
-            line = getLine(buffer);
             newFile.createNewFile();
+
+            line = getLine(buffer);
+
             while( !(oppCode.equals("END")) ){
                 processLine(buffer);
                 line = getLine(buffer);
             }
             finalArch.add(line);
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -75,16 +78,19 @@ public class MacroProcessor {
             createParameters(line);
             int level = 1;
             while(level>0){
-
                 line = getLine(buffer);//getting line
-                defTab.add( replaceParameters(line) ); //entering line with positional notation into definition table
 
-                if (oppCode.equals("MACRO")) {
-                    level++;
+                if( line.charAt(0) != '*' ) {
+                    defTab.add( replaceParameters(line) ); //entering line with positional notation into definition table
+
+                    if (oppCode.equals("MACRO")) {
+                        level++;
+                    }
+                    else if (oppCode.equals("MEND")) {
+                        --level;
+                    }
                 }
-                else if (oppCode.equals("MEND")) {
-                    --level;
-                }
+
             }
             nameTab.addEnd(defTab.size()-1);
             formalParameterStack.popLastLevel();
@@ -142,7 +148,17 @@ public class MacroProcessor {
     }
 
     public void createArguments(String line){
-        char[] arrayChar = line.toCharArray();
+
+        char[] arrayChar;
+
+        int length = line.indexOf(" *");
+        if(length != -1){
+            arrayChar = line.substring(0, length).toCharArray();
+        }
+        else{
+            arrayChar = line.toCharArray();
+        }
+
         StringBuilder sb = new StringBuilder();
 
         int a = 0;
@@ -167,7 +183,7 @@ public class MacroProcessor {
             }
             if (sb.toString() != "")
                 ++size;
-            argTab.add(sb.toString());
+                argTab.add(sb.toString());
 
             sb.delete(0, sb.length());
         }
