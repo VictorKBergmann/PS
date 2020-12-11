@@ -13,6 +13,8 @@ public class Assembler {
     private Map<String, Integer> definitionTable;
     private String[] aux;
     private int locationCounter;
+    private String stack;
+    private String mod;
 
     public Assembler(String adress){
         symbolTable = new HashMap<>();
@@ -20,7 +22,9 @@ public class Assembler {
         usageTable = new HashMap<>();
         definitionTable = new HashMap<>();
         lines = new ArrayList<>();
+        mod = new String();
         locationCounter = 0;
+        stack = "10";
         oppcodeTable = mapOppcode();
         readFile(adress);
         firstStep();
@@ -29,15 +33,25 @@ public class Assembler {
 
     private void readFile(String adress){
         try{
-            BufferedReader lerArq;
+        BufferedReader lerArq;
 
-            lerArq = new BufferedReader( new FileReader(adress));
+        lerArq = new BufferedReader( new FileReader(adress));
+        line = lerArq.readLine();
+        while(line != null && !line.equals("CR")) {
             line = lerArq.readLine();
-            while(line != null) {
-                lines.add(line);
-                line = lerArq.readLine();
-            }
-            lerArq.close();
+        }
+        if(line == null){
+            throw new IllegalArgumentException("CR not found");
+        }
+        line = lerArq.readLine();
+        while(line != null && !line.equals("LF")) {
+            lines.add(line);
+            line = lerArq.readLine();
+        }
+        if(line == null) {
+            throw new IllegalArgumentException("LF not found");
+        }
+        lerArq.close();
         }
         catch(IOException e) {
             System.out.println("error on reading the file!");
@@ -47,13 +61,12 @@ public class Assembler {
 
     private void firstStep(){
         String oppCode;
-
         for (String line: lines) {
             aux = line.split("\\s+"); //remove all spaces
-            oppCode = getOperation(aux); // get oppCode
+            oppCode = getOperation(aux).toLowerCase(); // get oppCode
             if(oppcodeTable.containsKey(oppCode)){
                 if(!oppcodeTable.get(oppCode)[1].equals(Integer.toString(getOperands(aux).size()))) {
-                    throw new IllegalArgumentException("Syntax error");
+                    throw new IllegalArgumentException("Incorrect operands number");
                 }
                 if(getLabel(aux) != null) {
                     labelValidator(getLabel(aux));
@@ -77,7 +90,12 @@ public class Assembler {
                 if(symbolTable.containsKey(getLabel(aux))){
                     throw new IllegalArgumentException("Duplicated label");
                 }
-                symbolTable.put(getLabel(aux), locationCounter);
+                else if(definitionTable.containsKey(getLabel(aux))){
+                    definitionTable.put(getLabel(aux), locationCounter);
+                }
+                else{
+                    symbolTable.put(getLabel(aux), locationCounter);    
+                }
                 locationCounter++;
             }
             else if(oppCode.equals("extdef")) {
@@ -88,8 +106,12 @@ public class Assembler {
                 labelValidator(getLabel(aux));
                 usageTable.put(getLabel(aux), new ArrayList<>());  
             }
-            //TODO
-            
+            else if(oppCode.equals("start")) {
+                
+            }
+            else if(oppCode.equals("stack")) {
+                stack = getOperands(aux).get(0);
+            }
             else{
                 throw new IllegalArgumentException("Operator not found");
             }
@@ -99,32 +121,27 @@ public class Assembler {
 
     private void secondStep(String adress){
         ArrayList<String> byLine = new ArrayList<>();
-        String fill = "000000000";
-        String pointer = "";
+        String pointer = new String();
         String operation;
         ArrayList<String> operands;
-
         locationCounter = 0;
-
-
-        String lst = new String();
+        String lst;
         int lineCounter = 0;
         PrintWriter printerLST = generateLstFile(adress);
-
         for (String line: lines) {
             aux = line.split("\\s+");
-            operation = getOperation(aux);
+            operation = getOperation(aux).toLowerCase();
             operands = getOperands(aux);
             switch (operation) {
                 case "const":
-                    pointer = toString((short)locationCounter);
-                    pointer = pointer.concat(toString(Short.parseShort(operands.get(0))));
+                    pointer = toString(Short.parseShort(operands.get(0)));
+                    mod = mod.concat("1");
                     locationCounter++;
                     byLine.add(pointer);
                     break;
                 case "space":
-                    pointer = toString((short)locationCounter);
-                    pointer = pointer.concat(toString((short)0));
+                    pointer = toString((short)0);
+                    mod = mod.concat("1");
                     locationCounter++;
                     byLine.add(pointer);
                     break;
@@ -132,23 +149,41 @@ public class Assembler {
                     generateObjectFile(byLine, adress);
                     return;
                 case "extdef":
+                    locationCounter--;
                     break;
                 case "extr":
                     break;
+                case "start":
+                    locationCounter = Integer.parseInt(operands.get(0));
+                    break;
+                case "stack":
+                    locationCounter--;
+                    break;
                 default:
-                    pointer = toString((short)locationCounter);
-                    pointer = pointer.concat(fill);
+                    pointer = "000000000";
+                    if(!Arrays.asList(oppcodeTable.get(operation)).contains(getAdress(operands))){
+                        throw new IllegalArgumentException("Invalid adress mode");
+                    }
                     pointer = pointer.concat(getAdress(operands));
                     pointer = pointer.concat(oppcodeTable.get(getOperation(aux))[0]);
+                    mod = mod.concat("0");
                     for (String operand: operands) {
-                        
-                        if (operand.startsWith("#")) {
-                            operand = operand.substring(1);
+                        if(operand.startsWith("#") && operand.endsWith(",I")) {
+                            throw new IllegalArgumentException("Syntax error");
                         }
-                        if(operand.endsWith("I")) {
-                            operand = operand.substring(0, operand.length() - 1);
+                        if (operand.startsWith("#")) {
+                            mod = mod.concat("0");
+                            operand = operand.substring(1);
+                            if(!isNumeric(operand)){
+                                throw new IllegalArgumentException("Syntax error");
+                            }
+                        }
+                        if(operand.endsWith(",I")) {
+                            mod = mod.concat("0");
+                            operand = operand.substring(0, operand.length() - 1);                          
                         }
                         if (!isNumeric(operand)) {   // is a label
+                            mod = mod.concat("1");
                             if(symbolTable.containsKey(operand)){
                                 operand = Integer.toString(symbolTable.get(operand));
                             }
@@ -172,7 +207,6 @@ public class Assembler {
             }
             lst = "[ " + Integer.toString(locationCounter) + ", " + line + "] " +Integer.toString( lineCounter) + " " + pointer;
             printerLST.println(lst);
-
             lineCounter++;
         }
         printerLST.close();
@@ -185,6 +219,37 @@ public class Assembler {
         throw new IllegalArgumentException("Syntax error");
     }
 
+    private void generateObjectFile(ArrayList<String> lins, String adress){
+        File arq = new File(adress.split("[.]")[0].concat(".obj"));
+        try{
+            arq.createNewFile();
+            FileWriter fileWriter = new FileWriter(arq, false);
+            PrintWriter printWriter = new PrintWriter(fileWriter);
+            printWriter.println(stack);
+            printWriter.println(">");
+            for(String lin : lins) {
+                printWriter.println(lin);
+            }
+            printWriter.println(">");
+            printWriter.println(mod);
+            printWriter.println(">");
+            for(Map.Entry<String, Integer> pair: definitionTable.entrySet()){
+                printWriter.println(pair.getKey() + " " + pair.getValue());
+            }
+            printWriter.println(">");
+            for(Map.Entry<String, ArrayList<Integer>> pair: usageTable.entrySet()){
+                printWriter.print(pair.getKey());
+                for(Integer values: pair.getValue()){
+                    printWriter.print(" " + values);
+                }
+            }
+            printWriter.close();
+        }
+        catch(IOException e){
+            System.out.println("error on creating file!"); 
+        }
+    }
+    
     private PrintWriter generateLstFile(String adress){
         File arq = new File(adress.split("[.]")[0].concat(".lst"));
         try {
@@ -198,23 +263,6 @@ public class Assembler {
         }
         return null;
     }
-    private void generateObjectFile(ArrayList<String> lins, String adress){
-        File arq = new File(adress.split("[.]")[0].concat(".obj"));
-        try{
-            arq.createNewFile();
-            FileWriter fileWriter = new FileWriter(arq, false);
-            PrintWriter printWriter = new PrintWriter(fileWriter);
-            for(String lin : lins) {
-                printWriter.println(lin);
-            }
-            printWriter.close();
-        }
-        catch(IOException e){
-            System.out.println("error on creating obj file!");
-        }
-    }
-    
-
 
 
     private String getAdress(ArrayList<String> operands){
@@ -223,26 +271,26 @@ public class Assembler {
                 if(operands.get(0).startsWith("#")) {
                     return "100";
                 }
-                else if(operands.get(0).endsWith("I")) {
+                else if(operands.get(0).endsWith(",I")) {
                     return "001";
                 }
                 else{
                     return "000";
                 }
             case 2:
-                if(operands.get(0).endsWith("I") && operands.get(1).endsWith("I")){
+                if(operands.get(0).endsWith(",I") && operands.get(1).endsWith(",I")){
                     return "011";
                 }
-                else if(operands.get(0).endsWith("I") && operands.get(1).startsWith("#")){
+                else if(operands.get(0).endsWith(",I") && operands.get(1).startsWith("#")){
                     return "101";
                 }
-                else if(operands.get(0).endsWith("I")){
+                else if(operands.get(0).endsWith(",I")){
                     return "001";
                 }
                 else if(operands.get(1).startsWith("#")){
                     return "100";
                 }
-                else if(operands.get(1).endsWith("I")){
+                else if(operands.get(1).endsWith(",I")){
                     return "010";
                 }
                 else{
@@ -274,22 +322,22 @@ public class Assembler {
 
 
     private Map<String,String[]> mapOppcode() {
-        oppcodeTable.put("br", new String[]{"0000", "1"});
-        oppcodeTable.put("brpos", new String[]{"0001", "1"});
-        oppcodeTable.put("add", new String[]{"0010", "1"});
-        oppcodeTable.put("load", new String[]{"0011", "1"});
-        oppcodeTable.put("brzero", new String[]{"0100", "1"});
-        oppcodeTable.put("brneg", new String[]{"0101", "1"});
-        oppcodeTable.put("sub", new String[]{"0110", "1"});
-        oppcodeTable.put("store", new String[]{"0111", "1"});
-        oppcodeTable.put("write", new String[]{"1000", "1"});
-        oppcodeTable.put("ret", new String[]{"1001", "1"});
-        oppcodeTable.put("divide", new String[]{"1010", "1"});
-        oppcodeTable.put("stop", new String[]{"1011", "0"});
-        oppcodeTable.put("read", new String[]{"1100", "1"});
-        oppcodeTable.put("copy", new String[]{"1101", "2"});
-        oppcodeTable.put("mult", new String[]{"1110", "1"});
-        oppcodeTable.put("call", new String[]{"1111", "1"});
+        oppcodeTable.put("br", new String[]{"0000", "1", "000", "001"});
+        oppcodeTable.put("brpos", new String[]{"0001", "1", "000", "001"});
+        oppcodeTable.put("add", new String[]{"0010", "1", "000", "001", "100"});
+        oppcodeTable.put("load", new String[]{"0011", "1", "000", "001", "100"});
+        oppcodeTable.put("brzero", new String[]{"0100", "1", "000", "001"});
+        oppcodeTable.put("brneg", new String[]{"0101", "1", "000", "001"});
+        oppcodeTable.put("sub", new String[]{"0110", "1", "000", "001", "100"});
+        oppcodeTable.put("store", new String[]{"0111", "1", "000", "001"});
+        oppcodeTable.put("write", new String[]{"1000", "1", "000", "001", "100"});
+        oppcodeTable.put("ret", new String[]{"1001", "0", "000"});
+        oppcodeTable.put("divide", new String[]{"1010", "1", "000", "001", "100"});
+        oppcodeTable.put("stop", new String[]{"1011","0", "000"});
+        oppcodeTable.put("read", new String[]{"1100", "1", "000", "001"});
+        oppcodeTable.put("copy", new String[]{"1101", "2", "000", "010", "100", "001", "011", "101"});
+        oppcodeTable.put("mult", new String[]{"1110", "1", "000", "001", "100"});
+        oppcodeTable.put("call", new String[]{"1111", "1", "000", "001"});
         return oppcodeTable;
     }
 
