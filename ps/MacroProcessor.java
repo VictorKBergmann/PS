@@ -16,6 +16,7 @@ public class MacroProcessor {
     private int expanding;
     private String line;
     private int indexDefTab =0;
+    String oppCode;
 
     public MacroProcessor(String address) {
         this.address = address;
@@ -38,7 +39,7 @@ public class MacroProcessor {
         try {
             line = getLine(buffer);
 
-            while(!(getOppCode(line).equals("END"))){
+            while( !(oppCode.equals("END")) ){
                 processLine(buffer);
                 line = getLine(buffer);
             }
@@ -63,7 +64,7 @@ public class MacroProcessor {
         try {
             //line = buffer.readLine();
             line = getLine(buffer);
-            nameTab.addName(getOppCode(line)); //entering macro NAME into nameTab
+            nameTab.addName(oppCode); //entering macro NAME into nameTab
             nameTab.addStart(defTab.size()); //entering the start position of macro call in nameTab
             defTab.add(line); //entering macro prototype into definition table
 
@@ -74,10 +75,10 @@ public class MacroProcessor {
                 line = getLine(buffer);//getting line
                 defTab.add( replaceParameters(line) ); //entering line with positional notation into definition table
 
-                if (getOppCode(line).equals("MACRO")) {
+                if (oppCode.equals("MACRO")) {
                     level++;
                 }
-                else if (getOppCode(line).equals("MEND")) {
+                else if (oppCode.equals("MEND")) {
                     --level;
                 }
             }
@@ -94,37 +95,39 @@ public class MacroProcessor {
         indexDefTab = nameTab.getStart(nameTab.indexOfName(macroName));
         String macroPrototype = defTab.get(indexDefTab);
 
-       // argTab.clear();
         createArguments(line);  //set up arguments from macro invocation in ArgTAB
-        finalArch.add("*Comment: "+ macroPrototype); //write macro invocation to expanded file as comment
+        finalArch.add("*Comment: "+ macroPrototype + "  -Argumentos: " + argTab.getArgsLastLevel()); //write macro invocation to expanded file as comment
 
         line = getLine(buffer);
-        while(!getOppCode(line).equals("MEND")){
+        while(!oppCode.equals("MEND")){
 
             processLine(buffer);
             line = getLine(buffer);
 
         }
         indexDefTab = tempIndexDefTab;
-        argTab.clear();
+        argTab.popLastLevel();
         --expanding;
     }
     public String getLine(BufferedReader buffer) throws IOException {
+        String s;
         if(expanding>0){
             ++indexDefTab;
-            return replaceArguments(defTab.get(indexDefTab));
+            s = replaceArguments(defTab.get(indexDefTab));
         }
         else{
-            return buffer.readLine();
+            s = buffer.readLine();
         }
+        oppCode = getOppCode(s);
+        return s;
     }
     public void processLine(BufferedReader buffer) throws IOException {
-        String oppCode = getOppCode(line);
+        //String oppCode = getOppCode(line);
 
         if(nameTab.isInNameTab(oppCode)){
             expansionMode(buffer, oppCode);
         }
-        else if(getOppCode(line).equals("MACRO")){
+        else if(oppCode.equals("MACRO")){
             definitionMode(buffer);
         }
         else{
@@ -137,7 +140,8 @@ public class MacroProcessor {
         char[] arrayChar = line.toCharArray();
         StringBuilder sb = new StringBuilder();
 
-        int a = 0;
+        int a = 1;      // a = 1 para ignorar label...
+        int size = 0;
         if(arrayChar[a] == '&') {
             while (arrayChar[a] != ' ' && arrayChar[a] != '\t')
                 a++;
@@ -157,71 +161,35 @@ public class MacroProcessor {
 
             }
             if (sb.toString() != "")
-                argTab.add(sb.toString(), -1, -1);
-            System.out.println(sb.toString());
+                ++size;
+                argTab.add(sb.toString());
+
+            argTab.addSizeLastLevel(size);
             sb.delete(0, sb.length());
         }
 
     }
     public String replaceArguments(String line){
-        int temp = argTab.size();
+        int temp = argTab.getSizeLastLevel();
         String a;
-        for(int i = 0; i< temp; ++i){
+        for(int i = 1; i< temp+1; ++i){
 
-            a= "#(1," + (i+1) + ")";
+            a = "#("+ (i) + ")";
             while(line.contains(a)){
-                line = line.replace(a, argTab.getName(i));
+                line = line.replace(a, argTab.getName( i-1));
             }
 
         }
 
         return line;
     }
-    public void createAr(String line){
-        char[] arrayChar = line.toCharArray();
-        StringBuilder sb = new StringBuilder();
-        int position = 0;
-
-        int a = 0;
-        while(arrayChar[a] != ' ') {
-            ++a;
-        }
-        for(a= a + 1 ; a < arrayChar.length; ++a){
-            while(arrayChar[a] != ',' && arrayChar[a] != ' '){
-                if(arrayChar[a] == '#'){
-                    while(arrayChar[a-1] != ')') {
-                        sb.append(arrayChar[a]);
-                        a++;
-                        if (a == arrayChar.length){
-                            --a;
-                            arrayChar[a-1] = ')';
-                            arrayChar[a] = ' ';
-                        }
-                    }
-                }
-                else {
-                    sb.append(arrayChar[a]);
-                    ++a;
-                    if (a >= arrayChar.length) {
-                        --a;
-                        arrayChar[a] = ',';
-                    }
-                }
-            }
-            position++;
-            argTab.add(sb.toString(), 1, position);
-            sb.delete(0, sb.length());
-        }
-
-    }
-
     public void createParameters(String line){
 
         char[] arrayChar = line.toCharArray();
         StringBuilder sb = new StringBuilder();
         int position = 0;
         int level = formalParameterStack.getLastLevel() + 1;
-        for(int a = 0; a < arrayChar.length; ++a){
+        for(int a = 1; a < arrayChar.length; ++a){ // a = 1, para ignorar o label, já que n consideremos parâmetro...
 
             if(arrayChar[a] == '&'){
                 while(arrayChar[a] != ',' && arrayChar[a] != ' ' && arrayChar[a] != '\t'){
@@ -251,46 +219,23 @@ public class MacroProcessor {
 
         for(int count = formalParameterStack.size()-1; count >= 0; --count){
 
-            line = line.replaceAll(formalParameterStack.getName(count), "#(" + formalParameterStack.getDLevel(count)+ "," + formalParameterStack.getDPosition(count) +")");
+            line = line.replaceAll(formalParameterStack.getName(count), "#(" + formalParameterStack.getDPosition(count) +")");
         }
         return line;
     }
 
-    public String getOppCode(String line){
-        int j = 0;
+    public String getOppCode(String line) {
 
-        if(line.charAt(j) == '#'){ //if its a parameter
+        // [ [<label>] <opcode> [<operand1> [<operand2>]] ]  [<comentário>]
+        String[] aux = line.split("\\s+");
 
-            while((line.charAt(j) != ' ' ||  line.charAt(j) != '\t')&& j < line.length()){
-                ++j;
-            }
-            ++j;
+        if( aux.length > 1){
+            return aux[1];
         }
-        else if(line.charAt(j) == '&'){ //if its a label
-
-            while((line.charAt(j) != ' ' &&  line.charAt(j) != '\t')&& j < line.length()){
-                ++j;
-            }
-            ++j;
+        else{
+            return "";
         }
-        else if(line.charAt(j) == '\t' || line.charAt(j) == ' '){
-
-            while((line.charAt(j) == ' ' ||  line.charAt(j) == '\t')&& j < line.length()){
-                ++j;
-            }
-
-        }
-        for(int i = j; i<line.length() ; i++){
-
-            if(line.charAt(i) == ' ' || line.charAt(i) == '\t' || i+1 == line.length()){
-                if(i+1 == line.length())
-                    i++;
-                return line.substring(j, i);
-            }
-        }
-        return line;
     }
-
 
     public void readFile(String address){
         try{
