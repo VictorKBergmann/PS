@@ -30,34 +30,19 @@ public class MacroProcessor {
         File newFile = new File(generateNewAddress("MASMAPRG.ASM"));
         newAddress = newFile.getAbsolutePath();
 
-        try {
-            newFile.createNewFile();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
         try {
             line = getLine(buffer);
-
+            newFile.createNewFile();
             while( !(oppCode.equals("END")) ){
                 processLine(buffer);
                 line = getLine(buffer);
             }
             finalArch.add(line);
-
-            /*System.out.println("DefTab: ");
-            for (int i = 0; i < defTab.size(); i++){
-                System.out.println(defTab.get(i));
-            }
-            */
-            System.out.println("Arquivo Final: ");
-            for (int i = 0; i < finalArch.size(); i++){
-                System.out.println(finalArch.get(i));
-            }
-
         } catch (IOException e) {
             e.printStackTrace();
         }
+        writeFile("MASMAPRG.ASM", finalArch);
     }
 
     public void deleteFromDefTab(){
@@ -182,7 +167,7 @@ public class MacroProcessor {
             }
             if (sb.toString() != "")
                 ++size;
-                argTab.add(sb.toString());
+            argTab.add(sb.toString());
 
             sb.delete(0, sb.length());
         }
@@ -266,10 +251,12 @@ public class MacroProcessor {
             System.out.println("Error on file reading "+ address + " .");
         }
     }
-    public void writeFile(String address, String line){
+    public void writeFile(String address, ArrayList<String> line){
         try {
             PrintWriter archive = new PrintWriter(address);
-            archive.println(line);
+            for(int i = 0; i < line.size(); i++) {
+                archive.println(line.get(i));
+            }
             archive.close();
         } catch (FileNotFoundException fileNotFoundException) {
             fileNotFoundException.printStackTrace();
