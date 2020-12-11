@@ -60,12 +60,31 @@ public class MacroProcessor {
         }
     }
 
+    public void deleteFromDefTab(){
+        int index = nameTab.indexOfName(oppCode);
+        int size = nameTab.sizeOfName(index);
+
+        int address = nameTab.getStart(index);
+        for(int i = 0; i< size; ++i){
+            //  defTab[i]= defTab[i+size];
+            defTab.remove(address);
+
+        }
+        nameTab.delete(index);
+
+    }
     public void definitionMode(BufferedReader buffer){
         try {
             //line = buffer.readLine();
             line = getLine(buffer);
+
+            if(nameTab.isInNameTab(oppCode)){
+                deleteFromDefTab();
+            }
+
             nameTab.addName(oppCode); //entering macro NAME into nameTab
             nameTab.addStart(defTab.size()); //entering the start position of macro call in nameTab
+
             defTab.add(line); //entering macro prototype into definition table
 
             createParameters(line);
@@ -84,6 +103,7 @@ public class MacroProcessor {
             }
             nameTab.addEnd(defTab.size()-1);
             formalParameterStack.popLastLevel();
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -140,7 +160,7 @@ public class MacroProcessor {
         char[] arrayChar = line.toCharArray();
         StringBuilder sb = new StringBuilder();
 
-        int a = 1;      // a = 1 para ignorar label...
+        int a = 0;
         int size = 0;
         if(arrayChar[a] == '&') {
             while (arrayChar[a] != ' ' && arrayChar[a] != '\t')
@@ -164,9 +184,9 @@ public class MacroProcessor {
                 ++size;
                 argTab.add(sb.toString());
 
-            argTab.addSizeLastLevel(size);
             sb.delete(0, sb.length());
         }
+        argTab.addSizeLastLevel(size);
 
     }
     public String replaceArguments(String line){
