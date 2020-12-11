@@ -1,6 +1,7 @@
 package ps;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,6 +16,7 @@ public class Assembler {
     private int locationCounter;
     private String stack;
     private String mod;
+    private PrintWriter printerLST;
 
     public Assembler(String adress){
         symbolTable = new HashMap<>();
@@ -29,6 +31,8 @@ public class Assembler {
         readFile(adress);
         firstStep();
         secondStep(adress);
+        printerLST = generateLstFile(adress);
+
     }
 
     private void readFile(String adress){
@@ -39,9 +43,13 @@ public class Assembler {
         line = lerArq.readLine();
         while(line != null && !line.equals("CR")) {
             line = lerArq.readLine();
+
         }
         if(line == null){
+            printerLST.println("CR not found");
+            printerLST.close();
             throw new IllegalArgumentException("CR not found");
+
         }
         line = lerArq.readLine();
         while(line != null && !line.equals("LF")) {
@@ -49,6 +57,8 @@ public class Assembler {
             line = lerArq.readLine();
         }
         if(line == null) {
+            printerLST.println("CR not found");
+            printerLST.close();
             throw new IllegalArgumentException("LF not found");
         }
         lerArq.close();
@@ -61,16 +71,21 @@ public class Assembler {
 
     private void firstStep(){
         String oppCode;
+        int lineCounter = 0;
         for (String line: lines) {
             aux = line.split("\\s+"); //remove all spaces
             oppCode = getOperation(aux).toLowerCase(); // get oppCode
             if(oppcodeTable.containsKey(oppCode)){
                 if(!oppcodeTable.get(oppCode)[1].equals(Integer.toString(getOperands(aux).size()))) {
+                    printerLST.println("Incorrect operands number - line "+ lineCounter);
+                    printerLST.close();
                     throw new IllegalArgumentException("Incorrect operands number");
                 }
                 if(getLabel(aux) != null) {
-                    labelValidator(getLabel(aux));
+                    labelValidator(getLabel(aux), lineCounter);
                     if(symbolTable.containsKey(getLabel(aux))){
+                        printerLST.println("Duplicated label - line "+ lineCounter);
+                        printerLST.close();
                         throw new IllegalArgumentException("Duplicated label");
                     }
                     else if(definitionTable.containsKey(getLabel(aux))){
@@ -86,8 +101,10 @@ public class Assembler {
                 return;
             }
             else if(oppCode.equals("space") || oppCode.equals("const")){
-                labelValidator(getLabel(aux));
+                labelValidator(getLabel(aux), lineCounter);
                 if(symbolTable.containsKey(getLabel(aux))){
+                    printerLST.println("Duplicated label - line "+ lineCounter);
+                    printerLST.close();
                     throw new IllegalArgumentException("Duplicated label");
                 }
                 else if(definitionTable.containsKey(getLabel(aux))){
@@ -99,11 +116,11 @@ public class Assembler {
                 locationCounter++;
             }
             else if(oppCode.equals("extdef")) {
-                labelValidator(getOperands(aux).get(0));
+                labelValidator(getOperands(aux).get(0), lineCounter);
                 definitionTable.put(getOperands(aux).get(0), null);
             }
             else if(oppCode.equals("extr")) {
-                labelValidator(getLabel(aux));
+                labelValidator(getLabel(aux), lineCounter);
                 usageTable.put(getLabel(aux), new ArrayList<>());  
             }
             else if(oppCode.equals("start")) {
@@ -113,9 +130,14 @@ public class Assembler {
                 stack = getOperands(aux).get(0);
             }
             else{
+                printerLST.println("Operator not found - line "+ lineCounter);
+                printerLST.close();
                 throw new IllegalArgumentException("Operator not found");
             }
+            lineCounter++;
         }
+        printerLST.println("Operator END not found");
+        printerLST.close();
         throw new IllegalArgumentException("Operator END not found");
     }
 
@@ -127,7 +149,7 @@ public class Assembler {
         locationCounter = 0;
         String lst;
         int lineCounter = 0;
-        PrintWriter printerLST = generateLstFile(adress);
+
         for (String line: lines) {
             aux = line.split("\\s+");
             operation = getOperation(aux).toLowerCase();
@@ -149,15 +171,13 @@ public class Assembler {
                     generateObjectFile(byLine, adress);
                     return;
                 case "extdef":
+                case "stack":
                     locationCounter--;
                     break;
                 case "extr":
                     break;
                 case "start":
                     locationCounter = Integer.parseInt(operands.get(0));
-                    break;
-                case "stack":
-                    locationCounter--;
                     break;
                 default:
                     pointer = "000000000";
@@ -212,11 +232,15 @@ public class Assembler {
         printerLST.close();
     }
     
-    private boolean labelValidator(String label) {
+    private void labelValidator(String label, int line) {
+
         if(label.matches("[A-Za-z0-9]+") && Character.isLetter(label.charAt(0)) && label.length() <= 8){
-            return true;
+            return;
         }
+        printerLST.println("Syntax error - line " + line);
+        printerLST.close();
         throw new IllegalArgumentException("Syntax error");
+
     }
 
     private void generateObjectFile(ArrayList<String> lins, String adress){
