@@ -7,7 +7,6 @@ import java.util.Map;
 
 public class Assembler {
     private ArrayList<String> lines;
-    private String line;
     private HashMap<String, Integer> symbolTable;
     private Map<String, String[]> oppcodeTable;
     private Map<String, ArrayList<Integer>> usageTable;
@@ -28,15 +27,17 @@ public class Assembler {
         locationCounter = 0;
         stack = "10";
         oppcodeTable = mapOppcode();
+	printerLST = generateLstFile(adress);
         readFile(adress);
         firstStep();
         secondStep(adress);
-        printerLST = generateLstFile(adress);
+        
 
     }
 
     private void readFile(String adress){
         try{
+        String line;
         BufferedReader lerArq;
 
         lerArq = new BufferedReader( new FileReader(adress));
@@ -168,7 +169,9 @@ public class Assembler {
                     byLine.add(pointer);
                     break;
                 case "end":
-                    generateObjectFile(byLine, adress);
+                    printerLST.println("Assembler successful, CONGRATULATIONS");
+                    printerLST.close();
+                    generateObjectFile(byLine, adress, locationCounter);
                     return;
                 case "extdef":
                 case "stack":
@@ -182,6 +185,8 @@ public class Assembler {
                 default:
                     pointer = "000000000";
                     if(!Arrays.asList(oppcodeTable.get(operation)).contains(getAdress(operands))){
+                        printerLST.println("Invalid adress mode - line "+ lineCounter);
+                        printerLST.close();
                         throw new IllegalArgumentException("Invalid adress mode");
                     }
                     pointer = pointer.concat(getAdress(operands));
@@ -189,13 +194,22 @@ public class Assembler {
                     mod = mod.concat("0");
                     for (String operand: operands) {
                         if(operand.startsWith("#") && operand.endsWith(",I")) {
+                            printerLST.println("Syntax error - line "+ lineCounter);
+                            printerLST.close();
                             throw new IllegalArgumentException("Syntax error");
                         }
                         if (operand.startsWith("#")) {
                             mod = mod.concat("0");
                             operand = operand.substring(1);
                             if(!isNumeric(operand)){
+                                printerLST.println("Syntax error - line "+ lineCounter);
+                                printerLST.close();
                                 throw new IllegalArgumentException("Syntax error");
+                            }
+                            if(Integer.parseInt(operand) > 32.767 ||Integer.parseInt(operand) < -32.768){
+                                printerLST.println("Over Flow - line "+ lineCounter);
+                                printerLST.close();
+                                throw new IllegalArgumentException("Over Flow");
                             }
                         }
                         if(operand.endsWith(",I")) {
@@ -215,6 +229,8 @@ public class Assembler {
                                 operand = "0";
                             }
                             else{
+                                printerLST.println("Label not defined - line "+ lineCounter);
+                                printerLST.close();
                                 throw new IllegalArgumentException("Label not defined");
                             }
                         }
@@ -225,11 +241,13 @@ public class Assembler {
                     byLine.add(pointer);
                     break;
             }
-            lst = "[ " + Integer.toString(locationCounter) + ", " + line + "] " +Integer.toString( lineCounter) + " " + pointer;
+            String help = "";
+            for (String s: aux) {help.concat(s + " ");}
+            lst = "[ " + Integer.toString(locationCounter)+ ", " + help + "] "+ Integer.toString( lineCounter)+ " " + pointer;
             printerLST.println(lst);
             lineCounter++;
         }
-        printerLST.close();
+
     }
     
     private void labelValidator(String label, int line) {
@@ -243,7 +261,7 @@ public class Assembler {
 
     }
 
-    private void generateObjectFile(ArrayList<String> lins, String adress){
+    private void generateObjectFile(ArrayList<String> lins, String adress, int locationC){
         File arq = new File(adress.split("[.]")[0].concat(".obj"));
         try{
             arq.createNewFile();
@@ -254,6 +272,8 @@ public class Assembler {
             for(String lin : lins) {
                 printWriter.println(lin);
             }
+            printWriter.println(">");
+            printWriter.println(locationC);
             printWriter.println(">");
             printWriter.println(mod);
             printWriter.println(">");
@@ -267,6 +287,8 @@ public class Assembler {
                     printWriter.print(" " + values);
                 }
             }
+
+
             printWriter.close();
         }
         catch(IOException e){
@@ -396,4 +418,5 @@ public class Assembler {
         }
         return res;
     }
+
 }
