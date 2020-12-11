@@ -39,7 +39,7 @@ public class ArgTab {
     public void popLastLevel(){
         int size = getSizeLastLevel();
 
-        for(int i = name.size() -1 ; i> size; --i){
+        for(int i = name.size()-1 ; i > size+1; --i){
             name.remove(i);
         }
         sizeLastLevel.remove(sizeLastLevel.size() - 1);
