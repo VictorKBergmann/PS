@@ -6,6 +6,7 @@ import java.util.ArrayList;
 public class Memory {
     private ArrayList<String> mem;
     private int dataPointer; // pointer to the end of instructions
+    private int stackSize;
 
     public Memory(){
         mem = new ArrayList<>(); // inicialize array

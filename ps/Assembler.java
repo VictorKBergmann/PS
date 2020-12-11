@@ -100,11 +100,17 @@ public class Assembler {
     private void secondStep(String adress){
         ArrayList<String> byLine = new ArrayList<>();
         String fill = "000000000";
-        String pointer;
+        String pointer = "";
         String operation;
         ArrayList<String> operands;
+
         locationCounter = 0;
-        
+
+
+        String lst = new String();
+        int lineCounter = 0;
+        PrintWriter printerLST = generateLstFile(adress);
+
         for (String line: lines) {
             aux = line.split("\\s+");
             operation = getOperation(aux);
@@ -164,7 +170,12 @@ public class Assembler {
                     byLine.add(pointer);
                     break;
             }
-        }       
+            lst = "[ " + Integer.toString(locationCounter) + ", " + line + "] " +Integer.toString( lineCounter) + " " + pointer;
+            printerLST.println(lst);
+
+            lineCounter++;
+        }
+        printerLST.close();
     }
     
     private boolean labelValidator(String label) {
@@ -174,6 +185,19 @@ public class Assembler {
         throw new IllegalArgumentException("Syntax error");
     }
 
+    private PrintWriter generateLstFile(String adress){
+        File arq = new File(adress.split("[.]")[0].concat(".lst"));
+        try {
+            arq.createNewFile();
+            FileWriter fileWriter = new FileWriter(arq, false);
+            PrintWriter printWriter = new PrintWriter(fileWriter);
+            return printWriter;
+        }
+        catch(IOException e){
+            System.out.println("error on creating lst file!");
+        }
+        return null;
+    }
     private void generateObjectFile(ArrayList<String> lins, String adress){
         File arq = new File(adress.split("[.]")[0].concat(".obj"));
         try{
@@ -186,13 +210,11 @@ public class Assembler {
             printWriter.close();
         }
         catch(IOException e){
-            System.out.println("error on creating file!"); 
+            System.out.println("error on creating obj file!");
         }
     }
     
-    private void generateListingFile(String adress){
-        //TODO
-    }
+
 
 
     private String getAdress(ArrayList<String> operands){
