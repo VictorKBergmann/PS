@@ -39,9 +39,29 @@ public class NameTab {
         }
         return false;
     }
-
+    public int sizeOfName(String name){
+        int index = indexOfName(name);
+        return endNameTab.get(index) - startNameTab.get(index);
+    }
+    public int sizeOfName(int index){
+        return endNameTab.get(index) - startNameTab.get(index) + 1;
+    }
     public int indexOfName(String name){
         return nameTab.indexOf(name);
+    }
+    public void delete(int index){
+
+        int sizeOfRemoved = sizeOfName(index);
+        nameTab.remove(index);
+        startNameTab.remove(index);
+        endNameTab.remove(index);
+
+        int size = nameTab.size();
+        for(int i = index; i< size; ++i){
+            startNameTab.set(i, startNameTab.get(i) - sizeOfRemoved);
+            endNameTab.set(i, endNameTab.get(i) - sizeOfRemoved);
+        }
+
     }
 
 }
