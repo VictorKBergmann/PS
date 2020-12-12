@@ -36,7 +36,7 @@ public class MacroProcessor {
 
             line = getLine(buffer);
 
-            while( !(oppCode.equals("END")) ){
+            while( !(line.equals("LF")) ){
                 processLine(buffer);
                 line = getLine(buffer);
             }
@@ -104,10 +104,10 @@ public class MacroProcessor {
 
         int tempIndexDefTab = indexDefTab;
         indexDefTab = nameTab.getStart(nameTab.indexOfName(macroName));
-        String macroPrototype = defTab.get(indexDefTab);
+        //String macroPrototype = defTab.get(indexDefTab);
 
         createArguments(line);  //set up arguments from macro invocation in ArgTAB
-        finalArch.add("*Comment: "+ macroPrototype + "  -Argumentos: " + argTab.getArgsLastLevel()); //write macro invocation to expanded file as comment
+        //finalArch.add("*macroPrototype + "  -Argumentos: " + argTab.getArgsLastLevel()); //write macro invocation to expanded file as comment
 
         line = getLine(buffer);
         while(!oppCode.equals("MEND")){
@@ -183,7 +183,7 @@ public class MacroProcessor {
             }
             if (sb.toString() != "")
                 ++size;
-                argTab.add(sb.toString());
+            argTab.add(sb.toString());
 
             sb.delete(0, sb.length());
         }
