@@ -30,7 +30,7 @@ public class Assembler {
 	printerLST = generateLstFile(adress);
         readFile(adress);
         firstStep();
-        secondStep(adress);
+        secondStep(adress);  
         
 
     }
@@ -54,7 +54,15 @@ public class Assembler {
         }
         line = lerArq.readLine();
         while(line != null && !line.equals("LF")) {
-            lines.add(line);
+            if(line.length() > 80) {
+                printerLST.println("Excessively long line");
+                printerLST.close();
+                throw new IllegalArgumentException("Excessively long line");
+            }
+            if(!line.startsWith("*")){
+                String temp = line.split("\\*")[0];
+                lines.add(temp);
+            }
             line = lerArq.readLine();
         }
         if(line == null) {
@@ -122,10 +130,11 @@ public class Assembler {
             }
             else if(oppCode.equals("extr")) {
                 labelValidator(getLabel(aux), lineCounter);
-                usageTable.put(getLabel(aux), new ArrayList<>());  
+                usageTable.put(getLabel(aux), new ArrayList<>());
+                usageTable.get(getLabel(aux)).add(null);
             }
             else if(oppCode.equals("start")) {
-                
+
             }
             else if(oppCode.equals("stack")) {
                 stack = getOperands(aux).get(0);
@@ -145,6 +154,7 @@ public class Assembler {
     private void secondStep(String adress){
         ArrayList<String> byLine = new ArrayList<>();
         String pointer = new String();
+        String help;
         String operation;
         ArrayList<String> operands;
         locationCounter = 0;
@@ -155,31 +165,42 @@ public class Assembler {
             aux = line.split("\\s+");
             operation = getOperation(aux).toLowerCase();
             operands = getOperands(aux);
+            help = "";
+            for (String s: aux) {help = help.concat(s + " ");}
             switch (operation) {
                 case "const":
                     pointer = toString(Short.parseShort(operands.get(0)));
-                    mod = mod.concat("1");
+                    mod = mod.concat("0");
+                    lst = "[ " + Integer.toString(locationCounter)+ ", " + help + "] "+ Integer.toString(lineCounter) + " " + pointer;
+                    printerLST.println(lst);
                     locationCounter++;
                     byLine.add(pointer);
                     break;
                 case "space":
                     pointer = toString((short)0);
-                    mod = mod.concat("1");
+                    mod = mod.concat("0");
+                    lst = "[ " + Integer.toString(locationCounter)+ ", " + help + "] "+ Integer.toString(lineCounter)+ " " + pointer;
+                    printerLST.println(lst);
                     locationCounter++;
                     byLine.add(pointer);
                     break;
                 case "end":
+                    lst = "[ " + Integer.toString(locationCounter)+ ", " + help + "] "+ Integer.toString(lineCounter);
+                    printerLST.println(lst);
                     printerLST.println("Assembler successful, CONGRATULATIONS");
                     printerLST.close();
+                    locationCounter++;
                     generateObjectFile(byLine, adress, locationCounter);
                     return;
                 case "extdef":
                 case "stack":
-                    locationCounter--;
-                    break;
                 case "extr":
+                    lst = "[ " + Integer.toString(locationCounter)+ ", " + help + "] "+ Integer.toString(lineCounter);
+                    printerLST.println(lst);
                     break;
                 case "start":
+                    lst = "[ " + Integer.toString(locationCounter)+ ", " + help + "] "+ Integer.toString(lineCounter);
+                    printerLST.println(lst);
                     locationCounter = Integer.parseInt(operands.get(0));
                     break;
                 default:
@@ -190,7 +211,7 @@ public class Assembler {
                         throw new IllegalArgumentException("Invalid adress mode");
                     }
                     pointer = pointer.concat(getAdress(operands));
-                    pointer = pointer.concat(oppcodeTable.get(getOperation(aux))[0]);
+                    pointer = pointer.concat(oppcodeTable.get(getOperation(aux).toLowerCase())[0]);
                     mod = mod.concat("0");
                     for (String operand: operands) {
                         if(operand.startsWith("#") && operand.endsWith(",I")) {
@@ -206,7 +227,7 @@ public class Assembler {
                                 printerLST.close();
                                 throw new IllegalArgumentException("Syntax error");
                             }
-                            if(Integer.parseInt(operand) > 32.767 ||Integer.parseInt(operand) < -32.768){
+                            if(Integer.parseInt(operand) > 32767 ||Integer.parseInt(operand) < -32768){
                                 printerLST.println("Over Flow - line "+ lineCounter);
                                 printerLST.close();
                                 throw new IllegalArgumentException("Over Flow");
@@ -225,7 +246,12 @@ public class Assembler {
                                 operand = Integer.toString(definitionTable.get(operand));
                             }
                             else if(usageTable.containsKey(operand)){
-                                usageTable.get(operand).add(locationCounter + 1);
+                                if(usageTable.get(operand).contains(null)){
+                                    usageTable.get(operand).set(0, locationCounter + 1);
+                                }
+                                else{
+                                    usageTable.get(operand).add(locationCounter + 1);
+                                }
                                 operand = "0";
                             }
                             else{
@@ -237,21 +263,24 @@ public class Assembler {
                         operand = toString(Short.parseShort(operand));
                         pointer = pointer.concat(operand);
                     }
+                    lst = "[ " + Integer.toString(locationCounter)+ ", " + help + "] "+ Integer.toString(lineCounter)+ " " + pointer;
+                    printerLST.println(lst);
                     locationCounter += getOperands(aux).size() + 1;
                     byLine.add(pointer);
                     break;
             }
-            String help = "";
-            for (String s: aux) {help.concat(s + " ");}
-            lst = "[ " + Integer.toString(locationCounter)+ ", " + help + "] "+ Integer.toString( lineCounter)+ " " + pointer;
-            printerLST.println(lst);
             lineCounter++;
         }
 
     }
     
     private void labelValidator(String label, int line) {
-
+        if(label.startsWith("#")){
+            label = label.substring(1);
+        }
+        if(label.endsWith(",I")){
+            label = label.substring(0, label.length() - 1);
+        }
         if(label.matches("[A-Za-z0-9]+") && Character.isLetter(label.charAt(0)) && label.length() <= 8){
             return;
         }
@@ -282,9 +311,8 @@ public class Assembler {
             }
             printWriter.println(">");
             for(Map.Entry<String, ArrayList<Integer>> pair: usageTable.entrySet()){
-                printWriter.print(pair.getKey());
                 for(Integer values: pair.getValue()){
-                    printWriter.print(" " + values);
+                    printWriter.print(pair.getKey() + " " + values + "\n");
                 }
             }
 
@@ -418,5 +446,4 @@ public class Assembler {
         }
         return res;
     }
-
 }
