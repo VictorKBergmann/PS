@@ -343,7 +343,7 @@ public class Cpu {
             case "1111": //CALL
                 pc = pointerIncrement(pc);
                 re = mem.getInstruction(toShort(pc));
-                if (toShort(sp) == 10) { // if it is full
+                if (toShort(sp) == mem.getStackSize()) { // if it is full
                     sp = "0000000000000000"; // point to base
                     throw new IllegalArgumentException("Stack Overflow"); // Stack Overflow exception
                 }

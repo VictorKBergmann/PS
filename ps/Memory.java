@@ -13,11 +13,22 @@ public class Memory {
         init(); //set the size and complete with '0's
     }
 
+    public int getStackSize() {
+        return stackSize;
+    }
+
+    public void setStackSize(int stackSize) {
+        this.stackSize = stackSize;
+    }
+
+
     /**
      *
      * @param position on memory
      * @return the instruction
      */
+
+
     public String getInstruction(int position) {     
         return (mem.get(position));
     }
