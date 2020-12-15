@@ -101,12 +101,13 @@ public class MacroProcessor {
     }
     public void expansionMode (BufferedReader buffer, String macroName) throws IOException {
         ++expanding;
+        ++labelCount;
 
         int tempIndexDefTab = indexDefTab;
         indexDefTab = nameTab.getStart(nameTab.indexOfName(macroName));
         //String macroPrototype = defTab.get(indexDefTab);
 
-        createArguments(line);  //set up arguments from macro invocation in ArgTAB
+        createArgumentsWithOmission(line);  //set up arguments from macro invocation in ArgTAB
         //finalArch.add("*macroPrototype + "  -Argumentos: " + argTab.getArgsLastLevel()); //write macro invocation to expanded file as comment
 
         line = getLine(buffer);
@@ -144,6 +145,29 @@ public class MacroProcessor {
         else{
             finalArch.add(line);
             // writeFile(newAddress, line);
+        }
+    }
+
+    public void createArgumentsWithOmission(String line){
+
+        String[] aux = line.split("\\s+");
+
+        if(aux.length > 1){
+
+            char lastParameter = ' ';
+            if(aux[2].endsWith(",")){
+                lastParameter = ',';
+            }
+            aux = aux[2].split(",");
+            int i;
+            for(i = 0; i< aux.length; ++i){
+                argTab.add(aux[i]);
+            }
+            if(lastParameter == ','){
+                ++i;
+                argTab.add("");
+            }
+            argTab.addSizeLastLevel(i);
         }
     }
 
@@ -193,6 +217,7 @@ public class MacroProcessor {
     public String replaceArguments(String line){
         int temp = argTab.getSizeLastLevel();
         String a;
+
         for(int i = 1; i< temp+1; ++i){
 
             a = "#("+ (i) + ")";
@@ -210,6 +235,7 @@ public class MacroProcessor {
         StringBuilder sb = new StringBuilder();
         int position = 0;
         int level = formalParameterStack.getLastLevel() + 1;
+
         for(int a = 1; a < arrayChar.length; ++a){ // a = 1, para ignorar o label, já que n consideremos parâmetro...
 
             if(arrayChar[a] == '&'){
@@ -226,15 +252,7 @@ public class MacroProcessor {
                 formalParameterStack.add(sb.toString(), level, ++position);
                 sb.delete(0, sb.length());
             }
-
         }
-        /*while(line!=null) {
-            int firstIndex = line.indexOf("&");
-            int lastIndex = line.indexOf(",");
-            parameters.add(line.substring(firstIndex, lastIndex));
-            line.substring(lastIndex);
-        }
-        */
     }
     public String replaceParameters(String line){
 
@@ -309,4 +327,3 @@ public class MacroProcessor {
         }
         return str;
     }
-}
