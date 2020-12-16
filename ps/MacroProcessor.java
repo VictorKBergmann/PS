@@ -8,25 +8,32 @@ public class MacroProcessor {
     private String address;
     private String newAddress;
 
-    private NameTab nameTab = new NameTab();
-    private ArgTab argTab = new ArgTab();
-    private ArrayList<String> defTab = new ArrayList<>();
+    private NameTab nameTab;
+    private ArgTab argTab;
+    private ArrayList<String> defTab;
     private ArrayList<String> finalArch = new ArrayList<>();
-    private FormalParameterStack formalParameterStack = new FormalParameterStack();
+    private FormalParameterStack formalParameterStack;
     private int expanding;
     private String line;
-    private int indexDefTab = 0;
+    private int indexDefTab;
     String oppCode;
-    private int labelCount = 0;
+    private int labelCount;
+
 
     public MacroProcessor(String address) {
         this.address = address;
+        this.nameTab = new NameTab();
+        this.argTab = new ArgTab();
+        this.defTab = new ArrayList<>();
+        this.formalParameterStack = new FormalParameterStack();
     }
 
     public void MacroProcessor() {
         readFile(address);
         expanding = 0;
-
+        indexDefTab = 0;
+        labelCount = 0;
+        
         BufferedReader buffer = new BufferedReader(input);
         File newFile = new File(generateNewAddress("MASMAPRG.ASM"));
         newAddress = newFile.getAbsolutePath();
