@@ -27,21 +27,21 @@ public class MacroProcessor {
         this.formalParameterStack = new FormalParameterStack();
     }
 
-    public void MacroProcessor(String address) {
+    public void MacroProcessor(String address, String nome) {
         this.address = address;
         readFile(address);
         expanding = 0;
         indexDefTab = 0;
         labelCount = 0;
-        
+
         BufferedReader buffer = new BufferedReader(input);
-        File newFile = new File(generateNewAddress("MASMAPRG.ASM"));
+        File newFile = new File(generateNewAddress(nome));
         newAddress = newFile.getAbsolutePath();
 
         try {
             newFile.createNewFile();
 
-            line = getLine(buffer);
+            line = getLine(buffer).replaceAll("\\s+", " ");
 
             while (!(line.equals("LF"))) {
                 processLine(buffer);
@@ -53,7 +53,9 @@ public class MacroProcessor {
             //e.printStackTrace();
             System.out.println("Error while reading the archive");
         }
-        writeFile("MASMAPRG.ASM", finalArch);
+        writeFile(newAddress, finalArch);
+        defTab.clear();
+        nameTab.clear();
     }
 
     public void deleteFromDefTab() {
@@ -112,7 +114,7 @@ public class MacroProcessor {
         return true;
     }
 
-     public void expansionMode(BufferedReader buffer, String macroName) throws IOException {
+    public void expansionMode(BufferedReader buffer, String macroName) throws IOException {
         ++expanding;
         ++labelCount;
 
@@ -139,10 +141,10 @@ public class MacroProcessor {
         String s;
         if (expanding > 0) {
             ++indexDefTab;
-            s = replaceArguments(defTab.get(indexDefTab));
+            s = replaceArguments(defTab.get(indexDefTab)).replaceAll("\\s+", " ");
         }
         else {
-            s = buffer.readLine();
+            s = buffer.readLine().replaceAll("\\s+", " ");
         }
         oppCode = getOppCode(s);
         return s;
