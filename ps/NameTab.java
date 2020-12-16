@@ -63,5 +63,10 @@ public class NameTab {
         }
 
     }
+    public void clear(){
+        nameTab.clear();
+        startNameTab.clear();
+        endNameTab.clear();
+    }
 
 }
