@@ -105,29 +105,29 @@ public class MacroProcessor {
         return true;
     }
 
-    public void expansionMode(BufferedReader buffer, String macroName) throws IOException {
+     public void expansionMode(BufferedReader buffer, String macroName) throws IOException {
         ++expanding;
         ++labelCount;
 
         int tempIndexDefTab = indexDefTab;
+        int tempLabelCount = labelCount;
         indexDefTab = nameTab.getStart(nameTab.indexOfName(macroName));
-        //String macroPrototype = defTab.get(indexDefTab);
+        String macroPrototype = defTab.get(indexDefTab);
 
         createArgumentsWithOmission(line);  //set up arguments from macro invocation in ArgTAB
-        //finalArch.add("*macroPrototype + "  -Argumentos: " + argTab.getArgsLastLevel()); //write macro invocation to expanded file as comment
+        finalArch.add("*Macro: "+ macroPrototype+ " Args: " + argTab.getArgsLastLevel()); //write macro invocation to expanded file as comment"
 
-        line = getLine(buffer);
+        line = getLine(buffer).replaceAll(".SER", ""+ tempLabelCount);;
         while (!oppCode.equals("MEND")) {
 
             processLine(buffer);
-            line = getLine(buffer);
+            line = getLine(buffer).replaceAll(".SER", ""+ tempLabelCount);;
 
         }
         indexDefTab = tempIndexDefTab;
         argTab.popLastLevel();
         --expanding;
     }
-
     public String getLine(BufferedReader buffer) throws IOException {
         String s;
         if (expanding > 0) {
