@@ -5,35 +5,43 @@ import java.util.*;
 
 public class Linker {
 
-    private String[] modules;
-    private ArrayList<Integer> modulesSize;
-    private HashMap<String, ArrayList<String>> modulesInstructions;
-    private ArrayList<Integer> instructionsLength;
-    private HashMap<String, HashMap<String, ArrayList<Integer>>> modulesUsageTable;
-    private HashMap<String, HashMap<String, Integer>> modulesDefinitionTable;
-    private ArrayList<String> relativeOrAbsolute;
+    private String[] modules; /** Modules name */
+    private ArrayList<Integer> modulesInitialAddress; /** Modules initial address passed by the assembler */
+    private HashMap<String, ArrayList<String>> modulesInstructions; /** Instructions of each module */
+    private ArrayList<Integer> instructionsLength; /** Size of each instruction line (used to write .exe file easier) */
+    private HashMap<String, HashMap<String, ArrayList<Integer>>> modulesUsageTable; /** Usage table of each module */
+    private HashMap<String, HashMap<String, Integer>> modulesDefinitionTable; /** Definition table of each module */
+    private ArrayList<String> relocationList; /** Relocation list (1 - relative, 0 - absolute)  */
+    private ArrayList<Integer> stackSize; /** Stack size of each module */
 
-    private HashMap<String, Integer> linkageSymbolTable;
-    private ArrayList<String> unifiedInstructions;
-    private Integer stackSize;
+    private HashMap<String, Integer> linkageSymbolTable; /** or Global symbol table */
+    private ArrayList<String> unifiedInstructions; /** Unified list of each module instructions */
 
-    public Linker(String firstModule, String secondModule) {
+    public Linker() {}
+
+    /**
+     * Initiate Linker process
+     */
+    public void init(String firstModule, String secondModule) {
 
         if (secondModule == null)
             modules = new String[]{firstModule};
         else
             modules = new String[]{firstModule, secondModule};
-        modulesSize = new ArrayList<>();
+        modulesInitialAddress = new ArrayList<>();
         modulesInstructions = new HashMap<>();
         instructionsLength = new ArrayList<>();
         modulesUsageTable = new HashMap<>();
         modulesDefinitionTable = new HashMap<>();
-        relativeOrAbsolute = new ArrayList<>();
+        relocationList = new ArrayList<>();
+        stackSize = new ArrayList<>();
 
         linkageSymbolTable = new HashMap<>();
         unifiedInstructions = new ArrayList<>();
 
         readFiles();
+
+        checkErrors();
 
         // First step
         createLinkageSymbolTable();
@@ -63,11 +71,11 @@ public class Linker {
 
             try {
 
-                file = new BufferedReader(new FileReader("./" + moduleName + ".obj"));
+                file = new BufferedReader(new FileReader(moduleName + ".obj"));
 
                 //stack size
                 line = file.readLine();
-                stackSize = Integer.parseInt(line);
+                stackSize.add(Integer.parseInt(line));
 
                 //>
                 file.readLine();
@@ -86,15 +94,14 @@ public class Linker {
 
                 // module size
                 line = file.readLine();
-                modulesSize.add(Integer.valueOf(line));
+                modulesInitialAddress.add(Integer.valueOf(line));
 
                 //>
                 file.readLine();
 
                 // relative or absolute
                 line = file.readLine();
-                for (String bit : line.split(""))
-                    relativeOrAbsolute.add(bit);
+                relocationList.addAll(Arrays.asList(line.split("")));
 
                 //>
                 file.readLine();
@@ -104,7 +111,6 @@ public class Linker {
                 while (!line.equals(">")) {
 
                     table = line.split(" ");
-                    //modulesDefinitionTable.get(moduleName).computeIfAbsent(table[0], k -> new Integer());
                     modulesDefinitionTable.get(moduleName).put(table[0], Integer.parseInt(table[1]));
 
                     line = file.readLine();
@@ -115,18 +121,52 @@ public class Linker {
                 while (line != null) {
 
                     table = line.split(" ");
-                    modulesUsageTable.get(moduleName).computeIfAbsent(table[0], k -> new ArrayList<>());
-                    modulesUsageTable.get(moduleName).get(table[0]).add(Integer.parseInt(table[1]));
+
+                    if (!table[1].equals("null")) {
+                        modulesUsageTable.get(moduleName).computeIfAbsent(table[0], k -> new ArrayList<>());
+                        modulesUsageTable.get(moduleName).get(table[0]).add(Integer.parseInt(table[1]));
+                    }
 
                     line = file.readLine();
                 }
 
             } catch (FileNotFoundException e) {
-                System.out.println("file not found!");;
+                throw new IllegalArgumentException("Linker: file not found!");
             } catch (IOException e) {
-                System.out.println("error reading the file!");
+                throw new IllegalArgumentException("Linker: error reading the file!");
             }
 
+        }
+
+    }
+
+    /**
+     * Check for definition errors
+     */
+    private void checkErrors() {
+
+        if (modules.length == 2) {
+
+            // START defined on segment 2
+            if (modulesInitialAddress.get(1) > 0)
+                throw new IllegalArgumentException("START instruction defined on Segment 2");
+
+            // global symbol not defined
+            for (String usedSymbol : modulesUsageTable.get(modules[0]).keySet())
+                if (!modulesDefinitionTable.get(modules[1]).containsKey(usedSymbol))
+                    throw new IllegalArgumentException("Global symbol not defined: "
+                            + usedSymbol + "[" + modules[0] + "]");
+
+            for (String usedSymbol : modulesUsageTable.get(modules[1]).keySet())
+                if (!modulesDefinitionTable.get(modules[0]).containsKey(usedSymbol))
+                    throw new IllegalArgumentException("Global symbol not defined: "
+                            + usedSymbol + "[" + modules[1] + "]");
+
+            // global symbol already defined
+            for (String defSymbol : modulesDefinitionTable.get(modules[0]).keySet())
+                if (modulesDefinitionTable.get(modules[1]).containsKey(defSymbol))
+                    throw new IllegalArgumentException("Global symbol already defined: "
+                            + defSymbol + "[" + modules[1] + "/" + modules[0] + "]");
         }
 
     }
@@ -138,7 +178,7 @@ public class Linker {
      */
     private void createLinkageSymbolTable() {
 
-        int firstModuleSize = modulesSize.get(0);
+        int relocationConstant = modulesInstructions.get(modules[0]).size();
         ArrayList<Integer> arr = new ArrayList<>();
 
         // Segment 1
@@ -148,28 +188,19 @@ public class Linker {
         // Segment 2
         if (modules.length != 1) {
 
-            // Object Code
-
             // Usage Table
             for (Map.Entry<String, ArrayList<Integer>> entry : modulesUsageTable.get(modules[1]).entrySet()) {
-                entry.getValue().forEach((x) -> arr.add(x + firstModuleSize));
+                entry.getValue().forEach((x) -> arr.add(x + relocationConstant));
                 modulesUsageTable.get(modules[1]).put(entry.getKey(), (ArrayList<Integer>) arr.clone());
                 arr.clear();
             }
 
-            // taking appropriate error action if any symbol has more than one definition. (IMPLEMENT)
-            // the length of the first segment is added to the address of each relative symbol entered from the second definition table.
-                // how do i know if it's relative?
-            // This ensures that its address is now relative to the origin of the first segment in the about-to-be-linked collection of segments.
-            // the same adjustment must be made to relative addresses within the program and to location counter values of entries in the use table
             // Definition Table
             for (Map.Entry<String, Integer> entry : modulesDefinitionTable.get(modules[1]).entrySet()) {
-                linkageSymbolTable.put(entry.getKey(), entry.getValue() + firstModuleSize);
+                linkageSymbolTable.put(entry.getKey(), entry.getValue() + relocationConstant);
             }
 
         }
-
-        System.out.println(linkageSymbolTable);
 
     }
 
@@ -178,23 +209,19 @@ public class Linker {
      * Unify program modules and update needed references
      */
     private void unifyModules() {
-        //  Necessarily deferred to Pass 2 is the actual patching of external references.
-        // The object code is copied unchanged, except for the updating just described (if it was indeed deferred),
-        // until the field is reached whose address is given in the next entry of the use table for the segment being copied.
-        // The symbol in that entry is looked up in the global symbol table, and its address therefrom added to the object code field.
-        // The symbol PROG2 is looked up in the global symbol table and found to have address 31. This value is added (as directed by the use table sign field)
-        // to the 00 in word 11 to yield the correct branch address. The relocation mode indicator of word 11 is also adjusted.
-        //  The original address is absolute; the address added in is relative. The resulting sum is therefore relative.
+
         for (String module : modules)
-            for (String instruction : modulesInstructions.get(module))
-                unifiedInstructions.add(instruction);
+            unifiedInstructions.addAll(modulesInstructions.get(module));
 
         for (String module : modules)
             for (Map.Entry<String, ArrayList<Integer>> entry : modulesUsageTable.get(module).entrySet())
-                for (Integer addr : entry.getValue())
-                    unifiedInstructions.set(addr, bitsPadding(linkageSymbolTable.get(entry.getKey())));
+                for (Integer addr : entry.getValue()) {
+                    unifiedInstructions.set(addr,
+                            Integer.parseInt(unifiedInstructions.get(addr), 2) + bitsPadding(linkageSymbolTable.get(entry.getKey())));
 
-        System.out.println(unifiedInstructions);
+                    if (relocationList.get(addr).equals("0"))
+                        relocationList.set(addr, "1");
+                }
 
     }
 
@@ -203,29 +230,32 @@ public class Linker {
      */
     private void writeFile() {
 
-        File file = new File("./" + modules[0] + ".hpx");
+        File file = new File(modules[0] + ".hpx");
 
         try {
 
-            file.createNewFile();
+            boolean created = file.createNewFile();
+            if (!created)
+                throw new IllegalArgumentException("Couldn't create file!");
+
             FileWriter fileWriter = new FileWriter(file, false);
             PrintWriter printWriter = new PrintWriter(fileWriter);
 
             // Stack Size
-            printWriter.println(stackSize);
+            if (modules.length == 1)
+                printWriter.println(stackSize.get(0));
+            else
+                printWriter.println(stackSize.get(0) + stackSize.get(1));
 
             printWriter.println(">");
 
-            // Program size
-            if (modules.length == 1)
-                printWriter.println(modulesSize.get(0));
-            else
-                printWriter.println(modulesSize.get(0) + modulesSize.get(1));
+            // Initial address
+            printWriter.println(modulesInitialAddress.get(0));
 
             printWriter.println(">");
 
             // Relocation bits
-            printWriter.println(String.join("", relativeOrAbsolute));
+            printWriter.println(String.join("", relocationList));
 
             printWriter.println(">");
 
@@ -249,14 +279,12 @@ public class Linker {
     /**
      * Convert an integer to a 16-bit binary string
      */
-    private String bitsPadding(Integer pc) {
+    private String bitsPadding(Integer value) {
 
-        String temp2 = Integer.toString(pc,2);
-        String temp1 = "";
-        for (int i=16; i > temp2.length(); i--) {
-            temp1 += "0";
-        }
-        return temp1.concat(temp2);
+        String temp2 = Integer.toString(value,2);
+        StringBuilder temp1 = new StringBuilder();
+        temp1.append("0".repeat(Math.max(0, 16 - temp2.length())));
+        return temp1.toString().concat(temp2);
 
     }
 
