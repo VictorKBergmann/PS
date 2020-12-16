@@ -8,17 +8,16 @@ public class MacroProcessor {
     private String address;
     private String newAddress;
 
-    private NameTab nameTab;
-    private ArgTab argTab;
-    private ArrayList<String> defTab;
-    private ArrayList<String> finalArch = new ArrayList<>();
-    private FormalParameterStack formalParameterStack;
+    private final NameTab nameTab;
+    private final ArgTab argTab;
+    private final ArrayList<String> defTab;
+    private final FormalParameterStack formalParameterStack;
     private int expanding;
     private String line;
     private int indexDefTab;
     String oppCode;
     private int labelCount;
-
+    private BufferedWriter arch;
 
     public MacroProcessor() {
         this.nameTab = new NameTab();
@@ -26,6 +25,8 @@ public class MacroProcessor {
         this.defTab = new ArrayList<>();
         this.formalParameterStack = new FormalParameterStack();
     }
+
+
 
     public void MacroProcessor(String address, String nome) {
         this.address = address;
@@ -35,11 +36,12 @@ public class MacroProcessor {
         labelCount = 0;
 
         BufferedReader buffer = new BufferedReader(input);
-        File newFile = new File(generateNewAddress(nome));
-        newAddress = newFile.getAbsolutePath();
+        File finalFile = new File(generateNewAddress(nome));
+        newAddress = finalFile.getAbsolutePath();
 
         try {
-            newFile.createNewFile();
+            finalFile.createNewFile();
+            createBufferedWriter(finalFile);
 
             line = getLine(buffer).replaceAll("\\s+", " ");
 
@@ -47,15 +49,17 @@ public class MacroProcessor {
                 processLine(buffer);
                 line = getLine(buffer);
             }
-            finalArch.add(line);
+            arch.newLine();
+            arch.write(line);
+            arch.close();
 
         } catch (IOException exception) {
             //e.printStackTrace();
             System.out.println("Error while reading the archive");
         }
-        writeFile(newAddress, finalArch);
         defTab.clear();
         nameTab.clear();
+
     }
 
     public void deleteFromDefTab() {
@@ -124,7 +128,8 @@ public class MacroProcessor {
         String macroPrototype = defTab.get(indexDefTab);
 
         createArgumentsWithOmission(line);  //set up arguments from macro invocation in ArgTAB
-        finalArch.add("*Macro: "+ macroPrototype+ " Args: " + argTab.getArgsLastLevel()); //write macro invocation to expanded file as comment"
+        arch.write("*Macro: "+ macroPrototype+ " Args: " + argTab.getArgsLastLevel());
+        arch.newLine();
 
         line = getLine(buffer).replaceAll(".SER", ""+ tempLabelCount);;
         while (!oppCode.equals("MEND")) {
@@ -160,8 +165,8 @@ public class MacroProcessor {
             if(!flag)
                 buffer.close();
         } else {
-            finalArch.add(line);
-            // writeFile(newAddress, line);
+            arch.write(line);
+            arch.newLine();
         }
     }
 
@@ -328,7 +333,14 @@ public class MacroProcessor {
         }
         return newAddress;
     }
-
+    public void createBufferedWriter (File file){
+        try {
+            FileWriter fw = new FileWriter(file);
+            arch = new BufferedWriter(fw);
+        } catch (IOException exception) {
+            exception.printStackTrace();
+        }
+    }
     public ArrayList<String> createList() {
         ArrayList<String> str = new ArrayList<>();
         String line;
