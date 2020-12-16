@@ -20,15 +20,15 @@ public class MacroProcessor {
     private int labelCount;
 
 
-    public MacroProcessor(String address) {
-        this.address = address;
+    public MacroProcessor() {
         this.nameTab = new NameTab();
         this.argTab = new ArgTab();
         this.defTab = new ArrayList<>();
         this.formalParameterStack = new FormalParameterStack();
     }
 
-    public void MacroProcessor() {
+    public void MacroProcessor(String address) {
+        this.address = address;
         readFile(address);
         expanding = 0;
         indexDefTab = 0;
