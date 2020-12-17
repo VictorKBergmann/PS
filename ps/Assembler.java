@@ -31,17 +31,17 @@ public class Assembler {
         stack = "10";
         oppcodeTable = mapOppcode();
 	printerLST = generateLstFile(adress);
-        readFile(adress);
+        readFile();
         firstStep();
         secondStep(adress);
     }
     
-    private void readFile(String adress){
+    private void readFile(){
         try{
         String line;
         BufferedReader lerArq;
 
-        lerArq = new BufferedReader( new FileReader(adress));
+        lerArq = new BufferedReader( new FileReader("MASMAPRG.ASM"));
         line = lerArq.readLine();
         while(line != null && !line.equals("CR")) {
             line = lerArq.readLine();
