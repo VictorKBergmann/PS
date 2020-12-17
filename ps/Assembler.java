@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-
-public class Assembler {
+    
+public class Assembler {		
     private ArrayList<String> lines;
     private HashMap<String, Integer> symbolTable;
     private Map<String, String[]> oppcodeTable;
@@ -16,8 +16,11 @@ public class Assembler {
     private String stack;
     private String mod;
     private PrintWriter printerLST;
-
-    public Assembler(String adress){
+    
+    public Assembler() { 
+    }
+    
+    public void execute(String adress) throws IllegalArgumentException {
         symbolTable = new HashMap<>();
         oppcodeTable = new HashMap<>();
         usageTable = new HashMap<>();
@@ -30,11 +33,9 @@ public class Assembler {
 	printerLST = generateLstFile(adress);
         readFile(adress);
         firstStep();
-        secondStep(adress);  
-        
-
+        secondStep(adress);
     }
-
+    
     private void readFile(String adress){
         try{
         String line;
@@ -160,6 +161,7 @@ public class Assembler {
         locationCounter = 0;
         String lst;
         int lineCounter = 0;
+        int initPos = 0;
 
         for (String line: lines) {
             aux = line.split("\\s+");
@@ -190,7 +192,7 @@ public class Assembler {
                     printerLST.println("Assembler successful, CONGRATULATIONS");
                     printerLST.close();
                     locationCounter++;
-                    generateObjectFile(byLine, adress, locationCounter);
+                    generateObjectFile(byLine, adress, initPos);
                     return;
                 case "extdef":
                 case "stack":
@@ -201,6 +203,7 @@ public class Assembler {
                 case "start":
                     lst = "[ " + Integer.toString(locationCounter)+ ", " + help + "] "+ Integer.toString(lineCounter);
                     printerLST.println(lst);
+                    initPos = Integer.parseInt(operands.get(0));
                     locationCounter = Integer.parseInt(operands.get(0));
                     break;
                 default:
