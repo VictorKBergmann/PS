@@ -1,4 +1,4 @@
-package macro;
+package ps;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -28,7 +28,7 @@ public class MacroProcessor {
 
 
 
-    public void MacroProcessor(String address, String nome) {
+    public void execute(String address) {
         this.address = address;
         readFile(address);
         expanding = 0;
@@ -36,7 +36,7 @@ public class MacroProcessor {
         labelCount = 0;
 
         BufferedReader buffer = new BufferedReader(input);
-        File finalFile = new File(generateNewAddress(nome));
+        File finalFile = new File(generateNewAddress("MASMAPRG.asm"));
         newAddress = finalFile.getAbsolutePath();
 
         try {
@@ -49,13 +49,11 @@ public class MacroProcessor {
                 processLine(buffer);
                 line = getLine(buffer);
             }
-            arch.newLine();
             arch.write(line);
             arch.close();
 
         } catch (IOException exception) {
-            //e.printStackTrace();
-            System.out.println("Error while reading the archive");
+            throw new IllegalArgumentException("Error while reading the file");
         }
         defTab.clear();
         nameTab.clear();
@@ -304,11 +302,11 @@ public class MacroProcessor {
             FileInputStream file = new FileInputStream(address);
             input = new InputStreamReader(file); //""
         } catch (Exception error) {
-            System.out.println("Error on file reading " + address + " .");
+            throw new IllegalArgumentException("Error on file reading " + address + " .");
         }
     }
 
-    public void writeFile(String address, ArrayList<String> line) {
+    /*public void writeFile(String address, ArrayList<String> line) {
         try {
             PrintWriter archive = new PrintWriter(address);
             for (int i = 0; i < line.size(); i++) {
@@ -319,7 +317,7 @@ public class MacroProcessor {
             fileNotFoundException.printStackTrace();
         }
 
-    }
+    }*/
 
     public String generateNewAddress(String newAddress) {
         int a;

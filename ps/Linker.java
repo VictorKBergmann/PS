@@ -22,7 +22,7 @@ public class Linker {
     /**
      * Initiate Linker process
      */
-    public void init(String firstModule, String secondModule) {
+    public void execute(String firstModule, String secondModule) {
 
         if (secondModule == null)
             modules = new String[]{firstModule};
@@ -71,7 +71,7 @@ public class Linker {
 
             try {
 
-                file = new BufferedReader(new FileReader(moduleName + ".obj"));
+                file = new BufferedReader(new FileReader(moduleName.split("\\.")[0] + ".obj"));
 
                 //stack size
                 line = file.readLine();
@@ -230,7 +230,7 @@ public class Linker {
      */
     private void writeFile() {
 
-        File file = new File(modules[0] + ".hpx");
+        File file = new File(modules[0].split("\\.")[0] + ".hpx");
 
         try {
 

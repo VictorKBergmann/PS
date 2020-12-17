@@ -14,6 +14,9 @@ public class PS {
  *
  *
  */
+        MacroProcessor mp = new MacroProcessor();
+        Assembler assembler = new Assembler();
+        Linker linker = new Linker();
         Memory mem = new Memory();
         Loader loader = new Loader(13, mem);
         Cpu cpu = new Cpu();
@@ -21,7 +24,7 @@ public class PS {
         EventQueue.invokeLater(new Runnable() {
                 @Override
                 public void run() {
-                    GUI gui = new GUI(mem, cpu, loader);
+                    GUI gui = new GUI(mem, cpu, loader, mp, assembler, linker);
                     gui.setVisible(true);
                 }
             });

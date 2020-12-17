@@ -41,7 +41,7 @@ public class Assembler {
         String line;
         BufferedReader lerArq;
 
-        lerArq = new BufferedReader( new FileReader("MASMAPRG.ASM"));
+        lerArq = new BufferedReader( new FileReader("MASMAPRG.asm"));
         line = lerArq.readLine();
         while(line != null && !line.equals("CR")) {
             line = lerArq.readLine();
