@@ -1,7 +1,11 @@
 package ps;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Scanner;
 
 public class Loader {
@@ -53,7 +57,7 @@ public class Loader {
                 "0000000000000000\n" +
                 "0000000000000000\n" +
                 "0000000000000000";
-        loader.loadAllWordsFromStringLinker(strTest);
+        loader.loadAllWordsFromStringLinker(loader.readLinkerFile("file.hpx"));
         System.out.println(mem.getMem());
     }
 
@@ -132,6 +136,14 @@ public class Loader {
         memory.setDataPointer(position);// saves the end of instructions
     }//end of loadAllWordsFromString
 
+    public String readLinkerFile(String str) {
+        try {
+            return Files.readString(Path.of(str), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
     public void loadAllWordsFromStringLinker(String string){
 
