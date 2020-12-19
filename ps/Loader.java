@@ -9,7 +9,11 @@ public class Loader {
     private InputStreamReader input; //input's from interface
     private int initPosition; //position to start saving instructions
     private int position; // actual writing position
+    private int initPositionMem;
     private Memory memory;
+    private int stackSize;
+    private String realocString;
+    private char[] realocArray;
 
 
     public Loader (int position, Memory memory){//builder used on GUI
@@ -94,6 +98,112 @@ public class Loader {
         }//end of while
         memory.setDataPointer(position);// saves the end of instructions
     }//end of loadAllWordsFromString
+
+
+    public void loadAllWordsFromStringLinker(String string){
+
+        int flag;
+        int flag2=-1;
+        int flag3 = 0;
+        String line;
+        Scanner scanner = new Scanner(string); //Scanner is better to read files, it's a list of strings to separate lines
+
+        stackSize = Integer.parseInt(scanner.nextLine());
+        line = scanner.nextLine();
+        initPositionMem = Integer.parseInt(scanner.nextLine());
+        line = scanner.nextLine();
+        realocString = scanner.nextLine();
+        realocArray = realocString.toCharArray();
+        line = scanner.nextLine();
+        initPosition = initPositionMem + stackSize;
+        setPosition();
+
+        while(scanner.hasNextLine()){
+
+            line = scanner.nextLine();
+            ++flag2; // used to know when it has Exception
+
+            if( line.length() == 16 || line.length() == 32 || line.length() == 48 ){// test if the line has the right length
+                // 16 == instruction, 32 == instruction + operator, 48 == instruction + 2 operator
+
+                for(flag = 0; flag< line.length(); ++flag){// test if it has non binary symbols
+                    if( !(line.codePointAt(flag) == 48 || line.codePointAt(flag) == 49) ){
+                        System.out.println("symbol "+ line.charAt(flag) + " on position " + flag +" of instruction " +flag2 + " isn't binary, instruction will be ignored.");
+                        flag = line.length() +1;
+                    }
+                }
+
+                if (flag == line.length()) {
+                    //saves instruction and operator on memory
+                    // 16 == instruction, 32 == instruction + operator, 48 == instruction + 2 operator
+                    if (flag == 16) {
+                        if(realocArray[flag3] == '0') {
+                            memory.setData(position, line);
+                            ++position;
+                            ++flag3;
+                        } else if(realocArray[flag3] == '1') {
+                            memory.setData(realocPosition(line), line);
+                            ++flag3;
+                        }
+
+                    } else if (flag == 32) {
+                        if(realocArray[flag3] == '0') {
+                            memory.setData(position, line.substring(0, 16));
+                            ++position;
+                            ++flag3;
+                        } else if(realocArray[flag3] == '1') {
+                            memory.setData(realocPosition(line.substring(0, 16)), line.substring(0, 16));
+                            ++flag3;
+                        }
+                        if(realocArray[flag3] == '0') {
+                            memory.setData(position, line.substring(16, 32));
+                            ++position;
+                            ++flag3;
+                        } else if(realocArray[flag3] == '1') {
+                            memory.setData(realocPosition(line.substring(16, 32)), line.substring(16, 32));
+                            ++flag3;
+                        }
+
+
+                    } else {
+                        if(realocArray[flag3] == '0') {
+                            memory.setData(position, line.substring(0, 16));
+                            ++position;
+                            ++flag3;
+                        } else if(realocArray[flag3] == '1') {
+                            memory.setData(realocPosition(line.substring(0, 16)), line.substring(0, 16));
+                            ++flag3;
+                        }
+                        if(realocArray[flag3] == '0') {
+                            memory.setData(position, line.substring(16, 32));
+                            ++position;
+                            ++flag3;
+                        } else if(realocArray[flag3] == '1') {
+                            memory.setData(realocPosition(line.substring(16, 32)), line.substring(16, 32));
+                            ++flag3;
+                        }
+                        if(realocArray[flag3] == '0') {
+                            memory.setData(position, line.substring(32, 48));
+                            ++position;
+                            ++flag3;
+                        } else if(realocArray[flag3] == '1') {
+                            memory.setData(realocPosition(line.substring(32, 48)), line.substring(32, 48));
+                            ++flag3;
+                        }
+                    }
+                }
+            }
+            else{
+                System.out.println("instruction "+ flag2 + " has not the right length. it will be ignored");
+            }
+        }//end of while
+        memory.setDataPointer(position);// saves the end of instructions
+    }//end of loadAllWordsFromString
+
+    private int realocPosition(String line) {
+        int newPosition = initPosition + Integer.parseInt(line, 2);
+        return newPosition;
+    }
 
     /**
      * this function is not used anymore, we do this on
