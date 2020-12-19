@@ -16,12 +16,45 @@ public class Loader {
     private char[] realocArray;
 
 
-    public Loader (int position, Memory memory){//builder used on GUI
-    
-        this.initPosition = position;
+    public Loader (Memory memory){//builder used on GUI
+
         this.memory = memory;
         setPosition();
 
+    }
+
+    public static void main(String[] args) {
+        Memory mem = new Memory();
+        Loader loader = new Loader(mem);
+        String strTest = "10\n" +
+                ">\n" +
+                "0\n" +
+                ">\n" +
+                "01010001010000010101000101010000000\n" +
+                ">\n" +
+                "00000000000000110000000000011101\n" +
+                "00000000000011100000000000011111\n" +
+                "00000000010001100000000000000011\n" +
+                "00000000000001110000000000100001\n" +
+                "00000000000000110000000000100001\n" +
+                "00000000010011100000000000000100\n" +
+                "00000000010001100000000000000011\n" +
+                "00000000000001110000000000100001\n" +
+                "00000000000000110000000000011110\n" +
+                "00000000000011100000000000011110\n" +
+                "00000000010001100000000000000011\n" +
+                "00000000000001110000000000100010\n" +
+                "00000000000001100000000000100001\n" +
+                "00000000000001110000000000100000\n" +
+                "0000000000001011\n" +
+                "0000000000000000\n" +
+                "0000000000000000\n" +
+                "0000000000000000\n" +
+                "0000000000000000\n" +
+                "0000000000000000\n" +
+                "0000000000000000";
+        loader.loadAllWordsFromStringLinker(strTest);
+        System.out.println(mem.getMem());
     }
 
     public void setPosition () {
@@ -105,6 +138,8 @@ public class Loader {
         int flag;
         int flag2=-1;
         int flag3 = 0;
+        int auxPosition = 0;
+
         String line;
         Scanner scanner = new Scanner(string); //Scanner is better to read files, it's a list of strings to separate lines
 
@@ -115,7 +150,7 @@ public class Loader {
         realocString = scanner.nextLine();
         realocArray = realocString.toCharArray();
         line = scanner.nextLine();
-        initPosition = initPositionMem + stackSize;
+        initPosition = initPositionMem + stackSize + 2;
         setPosition();
 
         while(scanner.hasNextLine()){
@@ -137,12 +172,16 @@ public class Loader {
                     //saves instruction and operator on memory
                     // 16 == instruction, 32 == instruction + operator, 48 == instruction + 2 operator
                     if (flag == 16) {
+                        if(line.equals("0000000000001011")) {
+                            auxPosition = position;
+                        }
                         if(realocArray[flag3] == '0') {
                             memory.setData(position, line);
                             ++position;
                             ++flag3;
                         } else if(realocArray[flag3] == '1') {
-                            memory.setData(realocPosition(line), line);
+                            memory.setData(position, realocPosition(line));
+                            ++position;
                             ++flag3;
                         }
 
@@ -152,7 +191,8 @@ public class Loader {
                             ++position;
                             ++flag3;
                         } else if(realocArray[flag3] == '1') {
-                            memory.setData(realocPosition(line.substring(0, 16)), line.substring(0, 16));
+                            memory.setData(position, realocPosition(line.substring(0, 16)));
+                            ++position;
                             ++flag3;
                         }
                         if(realocArray[flag3] == '0') {
@@ -160,7 +200,8 @@ public class Loader {
                             ++position;
                             ++flag3;
                         } else if(realocArray[flag3] == '1') {
-                            memory.setData(realocPosition(line.substring(16, 32)), line.substring(16, 32));
+                            memory.setData(position, realocPosition(line.substring(16, 32)));
+                            ++position;
                             ++flag3;
                         }
 
@@ -171,7 +212,8 @@ public class Loader {
                             ++position;
                             ++flag3;
                         } else if(realocArray[flag3] == '1') {
-                            memory.setData(realocPosition(line.substring(0, 16)), line.substring(0, 16));
+                            memory.setData(position, realocPosition(line.substring(0, 16)));
+                            ++position;
                             ++flag3;
                         }
                         if(realocArray[flag3] == '0') {
@@ -179,7 +221,8 @@ public class Loader {
                             ++position;
                             ++flag3;
                         } else if(realocArray[flag3] == '1') {
-                            memory.setData(realocPosition(line.substring(16, 32)), line.substring(16, 32));
+                            memory.setData(position, realocPosition(line.substring(16, 32)));
+                            ++position;
                             ++flag3;
                         }
                         if(realocArray[flag3] == '0') {
@@ -187,7 +230,8 @@ public class Loader {
                             ++position;
                             ++flag3;
                         } else if(realocArray[flag3] == '1') {
-                            memory.setData(realocPosition(line.substring(32, 48)), line.substring(32, 48));
+                            memory.setData(position, realocPosition(line.substring(32, 48)));
+                            ++position;
                             ++flag3;
                         }
                     }
@@ -197,13 +241,23 @@ public class Loader {
                 System.out.println("instruction "+ flag2 + " has not the right length. it will be ignored");
             }
         }//end of while
-        memory.setDataPointer(position);// saves the end of instructions
+        memory.setDataPointer(auxPosition);// saves the end of instructions
     }//end of loadAllWordsFromString
 
-    private int realocPosition(String line) {
-        int newPosition = initPosition + Integer.parseInt(line, 2);
-        return newPosition;
+    private String bitsPadding(Integer value) {
+
+        String temp2 = Integer.toString(value,2);
+        StringBuilder temp1 = new StringBuilder();
+        temp1.append("0".repeat(Math.max(0, 16 - temp2.length())));
+        return temp1.toString().concat(temp2);
+
     }
+
+    private String realocPosition(String line) {
+        int newPosition = initPosition + Integer.parseInt(line, 2);
+        return bitsPadding(newPosition);
+    }
+
 
     /**
      * this function is not used anymore, we do this on
