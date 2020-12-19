@@ -27,39 +27,11 @@ public class Loader {
 
     }
 
-    public static void main(String[] args) {
-        Memory mem = new Memory();
-        Loader loader = new Loader(mem);
-        String strTest = "10\n" +
-                ">\n" +
-                "0\n" +
-                ">\n" +
-                "01010001010000010101000101010000000\n" +
-                ">\n" +
-                "00000000000000110000000000011101\n" +
-                "00000000000011100000000000011111\n" +
-                "00000000010001100000000000000011\n" +
-                "00000000000001110000000000100001\n" +
-                "00000000000000110000000000100001\n" +
-                "00000000010011100000000000000100\n" +
-                "00000000010001100000000000000011\n" +
-                "00000000000001110000000000100001\n" +
-                "00000000000000110000000000011110\n" +
-                "00000000000011100000000000011110\n" +
-                "00000000010001100000000000000011\n" +
-                "00000000000001110000000000100010\n" +
-                "00000000000001100000000000100001\n" +
-                "00000000000001110000000000100000\n" +
-                "0000000000001011\n" +
-                "0000000000000000\n" +
-                "0000000000000000\n" +
-                "0000000000000000\n" +
-                "0000000000000000\n" +
-                "0000000000000000\n" +
-                "0000000000000000";
-        loader.loadAllWordsFromStringLinker(loader.readLinkerFile("file.hpx"));
-        System.out.println(mem.getMem());
+    public void execute(String path) {
+        String linkerData = readLinkerFile(path);
+        loadAllWordsFromStringLinker(linkerData);
     }
+
 
     public void setPosition () {
 
@@ -254,6 +226,7 @@ public class Loader {
             }
         }//end of while
         memory.setDataPointer(auxPosition);// saves the end of instructions
+        memory.setStackSize(stackSize);
     }//end of loadAllWordsFromString
 
     private String bitsPadding(Integer value) {
