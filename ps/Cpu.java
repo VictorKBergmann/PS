@@ -17,8 +17,10 @@ public class Cpu {
     private String ri, re, pc, sp, acc;
     private JTextArea out;
     private JOptionPane in;
+    private Memory mem;
 
-    public Cpu() {
+    public Cpu(Memory mem) {
+        this.mem = mem;
         init();
     }
 
@@ -56,7 +58,8 @@ public class Cpu {
         re = "0000000000000000";  //reg de endereço de memória
         acc = "0000000000000000";
         sp = "0000000000000000";
-        pc = "0000000000001101";
+        //pc = "0000000000001101";
+        pc = bitsPadding((short) (mem.getStackSize() + 2));
 
     }
 
@@ -127,7 +130,7 @@ public class Cpu {
     }
 
 
-    public boolean execute(Memory mem) throws IllegalArgumentException {
+    public boolean execute() throws IllegalArgumentException {
         ri = read(mem);
         String value;  //get values from data memory
         short operation;
