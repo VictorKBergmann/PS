@@ -26,8 +26,6 @@ public class MacroProcessor {
         this.formalParameterStack = new FormalParameterStack();
     }
 
-
-
     public void execute(String address) {
         this.address = address;
         readFile(address);
@@ -125,7 +123,7 @@ public class MacroProcessor {
         indexDefTab = nameTab.getStart(nameTab.indexOfName(macroName));
         String macroPrototype = defTab.get(indexDefTab);
 
-        createArgumentsWithOmission(line);  //set up arguments from macro invocation in ArgTAB
+        createArgumentsWithOmission(line, macroPrototype);  //set up arguments from macro invocation in ArgTAB
         arch.write("*Macro: "+ macroPrototype+ " Args: " + argTab.getArgsLastLevel());
         arch.newLine();
 
@@ -168,26 +166,42 @@ public class MacroProcessor {
         }
     }
 
-    public void createArgumentsWithOmission(String line) {
+    public void createArgumentsWithOmission(String line, String macroPrototype) {
 
-        String[] aux = line.split("\\s+");
+        String[] aux = macroPrototype.split("\\s+");
+        int numParameters = (aux[2].split(",")).length;
+        boolean labelFlag = false;
 
+        if(aux[0].startsWith("&")){
+            labelFlag = true;
+        }
+        aux = line.split("\\s+");
         if (aux.length > 1) {
 
-            char lastParameter = ' ';
+            int lastParameterFlag = 0;
             if (aux[2].endsWith(",")) {
-                lastParameter = ',';
+                lastParameterFlag = 1;
             }
             aux = aux[2].split(",");
-            int i;
-            for (i = 0; i < aux.length; ++i) {
-                argTab.add(aux[i]);
+
+            if(aux.length + lastParameterFlag == numParameters){
+                int i;
+                for (i = 0; i < aux.length; ++i) {
+                    argTab.add(aux[i]);
+                }
+                if (lastParameterFlag == 1) {
+                    ++i;
+                    argTab.add("");
+                }
+                if(labelFlag==true){
+                    argTab.add(line.substring(0, line.indexOf(' ')));
+                    ++i;
+                }
+                argTab.addSizeLastLevel(i);
             }
-            if (lastParameter == ',') {
-                ++i;
-                argTab.add("");
+            else{
+                throw new IllegalArgumentException("Macro call: " +line+ " -prototype: "+ macroPrototype+ " -Number of Arguments doesn't match!");
             }
-            argTab.addSizeLastLevel(i);
         }
     }
 
@@ -256,8 +270,8 @@ public class MacroProcessor {
         StringBuilder sb = new StringBuilder();
         int position = 0;
         int level = formalParameterStack.getLastLevel() + 1;
-
-        for (int a = 1; a < arrayChar.length; ++a) { // a = 1, para ignorar o label, já que n consideremos parâmetro...
+        int a;
+        for (a = 1; a < arrayChar.length; ++a) { // a = 1, para ignorar o label, já que n consideremos parâmetro...
 
             if (arrayChar[a] == '&') {
                 while (arrayChar[a] != ',' && arrayChar[a] != ' ' && arrayChar[a] != '\t') {
@@ -273,6 +287,9 @@ public class MacroProcessor {
                 formalParameterStack.add(sb.toString(), level, ++position);
                 sb.delete(0, sb.length());
             }
+        }
+        if(arrayChar[0]== '&'){
+            formalParameterStack.add( (line.split(" ") )[0], level, ++position);
         }
     }
 
