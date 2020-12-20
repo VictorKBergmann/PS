@@ -33,17 +33,17 @@ public class MacroProcessor {
         indexDefTab = 0;
         labelCount = 0;
 
-        BufferedReader buffer = new BufferedReader(input);
-        File finalFile = new File(generateNewAddress("MASMAPRG.asm"));
+        BufferedReader buffer = new BufferedReader(input);//buffer to read input file
+        File finalFile = new File(generateNewAddress("MASMAPRG.asm")); //creating output file
         newAddress = finalFile.getAbsolutePath();
 
         try {
             finalFile.createNewFile();
-            createBufferedWriter(finalFile);
+            createBufferedWriter(finalFile);//buffer to write in output file
 
             line = getLine(buffer).replaceAll("\\s+", " ");
 
-            while (!(line.equals("LF"))) {
+            while (!(line.equals("LF"))) {//processing lines from input file until end
                 processLine(buffer);
                 line = getLine(buffer);
             }
@@ -55,20 +55,6 @@ public class MacroProcessor {
         }
         defTab.clear();
         nameTab.clear();
-
-    }
-
-    public void deleteFromDefTab() {
-        int index = nameTab.indexOfName(oppCode);
-        int size = nameTab.sizeOfName(index);
-
-        int address = nameTab.getStart(index);
-        for (int i = 0; i < size; ++i) {
-            //  defTab[i]= defTab[i+size];
-            defTab.remove(address);
-
-        }
-        nameTab.delete(index);
 
     }
 
@@ -90,7 +76,7 @@ public class MacroProcessor {
             int level = 1;
             while (level > 0) {
                 line = getLine(buffer);//getting line
-                if (oppCode.equals("STOP")){
+                if (oppCode.equals("STOP")){//if macro isn't defined
                     return false;
                 }
 
@@ -105,7 +91,7 @@ public class MacroProcessor {
                 }
 
             }
-            nameTab.addEnd(defTab.size() - 1);
+            nameTab.addEnd(defTab.size() - 1);//entering the last position of macro into nameTab
             formalParameterStack.popLastLevel();
 
         } catch (IOException e) {
@@ -121,14 +107,14 @@ public class MacroProcessor {
         int tempIndexDefTab = indexDefTab;
         int tempLabelCount = labelCount;
         indexDefTab = nameTab.getStart(nameTab.indexOfName(macroName));
-        String macroPrototype = defTab.get(indexDefTab);
+        String macroPrototype = defTab.get(indexDefTab); //getting prototype of macro from defTAB
 
-        String label = createArgumentsWithOmission(line, macroPrototype);  //set up arguments from macro invocation in ArgTAB
+        String label = createArgumentsWithOmission(line, macroPrototype);  //setting up arguments from macro invocation in ArgTAB
 
-        arch.write("*Macro: "+ macroPrototype+ " Args: " + argTab.getArgsLastLevel());
+        arch.write("*Macro: "+ macroPrototype+ " Args: " + argTab.getArgsLastLevel());// writing in output file
         arch.newLine();
 
-        line = getLine(buffer).replaceAll(".SER", ""+ tempLabelCount);
+        line = getLine(buffer).replaceAll(".SER", ""+ tempLabelCount); //getting line already replacing .SER by label counter
 
         while (!oppCode.equals("MEND")) {
 
@@ -144,7 +130,7 @@ public class MacroProcessor {
                 }
             }
             processLine(buffer);
-            line = getLine(buffer).replaceAll(".SER", ""+ tempLabelCount);
+            line = getLine(buffer).replaceAll(".SER", ""+ tempLabelCount);//getting line already replacing .SER by label counter
 
         }
         indexDefTab = tempIndexDefTab;
@@ -153,12 +139,12 @@ public class MacroProcessor {
     }
     public String getLine(BufferedReader buffer) throws IOException {
         String s;
-        if (expanding > 0) {
+        if (expanding > 0) {// get next line from macro definition on defTAB
             ++indexDefTab;
             s = replaceArguments(defTab.get(indexDefTab)).replaceAll("\\s+", " ");
         }
         else {
-            s = buffer.readLine().replaceAll("\\s+", " ");
+            s = buffer.readLine().replaceAll("\\s+", " ");// read next line from archive
         }
         oppCode = getOppCode(s);
         return s;
@@ -180,7 +166,7 @@ public class MacroProcessor {
         }
     }
 
-    public String createArgumentsWithOmission(String line, String macroPrototype) {
+    public String createArgumentsWithOmission(String line, String macroPrototype) {//used in expansion mode
 
         String[] aux = macroPrototype.split("\\s+");
         int numParameters = (aux[2].split(",")).length;
@@ -188,14 +174,14 @@ public class MacroProcessor {
         String label = null;
         aux = line.split("\\s+");
 
-        if(macroPrototype.startsWith("&")){
+        if(macroPrototype.startsWith("&")){//checking if macro prototype has a label
             labelFlag = true;
         }
         else if(line.charAt(0) != ' '){
             label = aux[0];
         }
 
-        if (aux.length > 1) {
+        if (aux.length > 1) {//adding arguments in argTAB
 
             int lastParameterFlag = 0;
             if (aux[2].endsWith(",")) {
@@ -212,7 +198,7 @@ public class MacroProcessor {
                     ++i;
                     argTab.add("");
                 }
-                if(labelFlag==true){
+                if(labelFlag){
                     argTab.add(line.substring(0, line.indexOf(' ')));
                     ++i;
                 }
@@ -223,6 +209,18 @@ public class MacroProcessor {
             }
         }
         return label;
+    }
+    public void deleteFromDefTab() {
+        int index = nameTab.indexOfName(oppCode);
+        int size = nameTab.sizeOfName(index);
+
+        int address = nameTab.getStart(index);
+        for (int i = 0; i < size; ++i) {
+            //  defTab[i]= defTab[i+size];
+            defTab.remove(address);
+
+        }
+        nameTab.delete(index);
     }
 
     public void createArguments(String line) {
@@ -268,14 +266,14 @@ public class MacroProcessor {
 
     }
 
-    public String replaceArguments(String line) {
+    public String replaceArguments(String line) { //used in expansion mode
         int temp = argTab.getSizeLastLevel();
         String a;
 
         for (int i = 1; i < temp + 1; ++i) {
 
             a = "#(" + (i) + ")";
-            while (line.contains(a)) {
+            while (line.contains(a)) {// getting the right argument from argTAB and replacing
                 line = line.replace(a, argTab.getName(i - 1));
             }
 
@@ -291,10 +289,10 @@ public class MacroProcessor {
         int position = 0;
         int level = formalParameterStack.getLastLevel() + 1;
         int a;
-        for (a = 1; a < arrayChar.length; ++a) { // a = 1, para ignorar o label, já que n consideremos parâmetro...
+        for (a = 1; a < arrayChar.length; ++a) {
 
             if (arrayChar[a] == '&') {
-                while (arrayChar[a] != ',' && arrayChar[a] != ' ' && arrayChar[a] != '\t') {
+                while (arrayChar[a] != ',' && arrayChar[a] != ' ' && arrayChar[a] != '\t') {//adding all line parameters to sb
 
                     sb.append(arrayChar[a]);
                     ++a;
@@ -303,9 +301,8 @@ public class MacroProcessor {
                         arrayChar[a] = ',';
                     }
                 }
-                //if sb = &lab else
-                formalParameterStack.add(sb.toString(), level, ++position);
-                sb.delete(0, sb.length());
+                formalParameterStack.add(sb.toString(), level, ++position); //adding sb to stack
+                sb.delete(0, sb.length()); // sb clear
             }
         }
         if(arrayChar[0]== '&'){
@@ -313,9 +310,9 @@ public class MacroProcessor {
         }
     }
 
-    public String replaceParameters(String line) {
+    public String replaceParameters(String line) {//used to adding line in defTAB with 
 
-        for (int count = formalParameterStack.size() - 1; count >= 0; --count) {
+        for (int count = formalParameterStack.size() - 1; count >= 0; --count) { //getting line parameters and replacing for positions
 
             line = line.replaceAll(formalParameterStack.getName(count), "#(" + formalParameterStack.getDPosition(count) + ")");
         }
@@ -343,20 +340,7 @@ public class MacroProcessor {
         }
     }
 
-    /*public void writeFile(String address, ArrayList<String> line) {
-        try {
-            PrintWriter archive = new PrintWriter(address);
-            for (int i = 0; i < line.size(); i++) {
-                archive.println(line.get(i));
-            }
-            archive.close();
-        } catch (FileNotFoundException fileNotFoundException) {
-            fileNotFoundException.printStackTrace();
-        }
-
-    }*/
-
-    public String generateNewAddress(String newAddress) {
+    public String generateNewAddress(String newAddress) {//getting input archive patch
         int a;
         for (a = address.length(); a > 0; --a) {
             if (address.charAt(a - 1) == '/') {
@@ -368,7 +352,7 @@ public class MacroProcessor {
         }
         return newAddress;
     }
-    public void createBufferedWriter (File file){
+    public void createBufferedWriter (File file){ //used to write in output archive
         try {
             FileWriter fw = new FileWriter(file);
             arch = new BufferedWriter(fw);
