@@ -1,38 +1,40 @@
 package gui;
 
-import ps.Cpu;
-import ps.Loader;
-import ps.Memory;
+import ps.*;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
-import javax.swing.event.ChangeEvent;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.EtchedBorder;
+import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeListener;
-import javax.swing.plaf.basic.BasicArrowButton;
-import javax.swing.plaf.basic.BasicScrollBarUI;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.DefaultHighlighter;
 import java.awt.*;
-import java.awt.event.ActionListener;
-import java.util.HashMap;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public class GUI extends JFrame {
 
     private final Memory mem; /** Used to keep user instructions and data. */
     private final Cpu cpu; /** Used to run user instructions. */
     private final Loader loader; /** Used to load user instructions. */
+    private final MacroProcessor mp; /** Used for processing macros to assembler input. */
+    private final Assembler assembler; /** Used to assemble the source code. */
+    private final Linker linker; /** Used to link both segments and fix references. */
 
-    JMenuBar menuBar;
-    JMenu examples; /** Used to select default examples. */
-    JButton help; /** Button used to show help dialog */
-    JOptionPane helpDialog; /** Used to call help dialog */
-    JRadioButtonMenuItem continuousOp; /** Radio button representing run op mode */
-    JRadioButtonMenuItem debugOp; /** Radio button representing debug op mode */
-    JSlider slider; /** Used to increase/decrease execution speed */
-    ButtonGroup operation; /** Used to group both radio buttons */
+    JButton helpButton; /** Button used to show help info */
+    JButton settingsButton; /** Button used to show settings dialog */
+    JOptionPane settingsPanel;
+    JSlider speedSlider; /** Used to increase/decrease execution speed */
+    JRadioButton continuousOp; /** Radio button representing run op mode */
+    JRadioButton debugOp; /** Radio button representing debug op mode */
+    
+    private final JTextField firstFileField; /** Source code first field */
+    private final JTextField secondFileField; /** Source code second field */
 
-    private final JTable memoryTable; /** Shows memory as a table */
-    private String[][] memoryList; /** Keeps memory positions and values */
-    private final JScrollPane memoryScrollPane; /** Allows memory list to be scrolled. */
+    private final JTable memoryTable; /** Show memory as a table */
+    private String[][] memoryList; /** Keep memory positions and values */
+    private final JScrollPane memoryScrollPane; /** Allow memory list to be scrolled. */
 
     /**
      * User action buttons
@@ -44,19 +46,12 @@ public class GUI extends JFrame {
     /**
      * Panels used to centralize text
      */
-    private final JPanel inputPanel;
+    private final JPanel inputsPanel;
+    private final JPanel registersPanel;
     private final JPanel memoryPanel;
-    private final JPanel outputPanel;
 
-    /**
-     * Registers label
-     */
-    private final JLabel pcLabel;
-    private final JLabel spLabel;
-    private final JLabel accLabel;
-    private final JLabel mopLabel;
-    private final JLabel riLabel;
-    private final JLabel reLabel;
+    private final JPanel instructionPanel;
+    private final JLabel instructionLabel;
 
     /**
      * Registers current value
@@ -68,178 +63,125 @@ public class GUI extends JFrame {
     private final JLabel riValueLabel;
     private final JLabel reValueLabel;
 
-    private final JTextArea textArea; /** Area where user writes its instructions */
-    private final JScrollPane textAreaScrollPane; /** Allows editor to be scrolled. */
-    private int currentLine; /** Used to define a highlight at the current instruction line. */
-    private String[] currentInstructions; /** Used to know how many instructions will be executed. */
-
-    /**
-     * Execution highlighter
-     */
-    private final DefaultHighlighter highlighter;
-    private final DefaultHighlighter.DefaultHighlightPainter executionColor;
-    private final DefaultHighlighter.DefaultHighlightPainter errorColor;
-
     private final JTextArea consoleArea; /** Text area to show error messages and outputs. */
     private final JScrollPane consoleAreaScrollPane; /** Allow console output to be scrolled. */
 
-    private final GroupLayout layout; /** Used to create an interface custom layout. */
-
     private final Timer timer; /** Used to set a delay between executions (RUN MODE). */
 
-    private final HashMap<String, Integer> currentLineMap; /** Keeps index of each line and its instruction. */
-    private boolean isLoading; /** Used to know if instructions are already loaded in memory. */
+    private ArrayList<Boolean> steps; /** Used to know which step the program it is */
+    private ArrayList<String> files; /** Store files path */
+    private boolean isInitialProcess; /** Used to check whether it should initiate a process or not */
 
-    public GUI(Memory mem, Cpu cpu, Loader loader){
-
-        /**
-         * Starts menu bar and change its design
-         */
-        menuBar = new JMenuBar();
-        menuBar.setBackground(Color.LIGHT_GRAY);
-        menuBar.setBorder(BorderFactory.createEmptyBorder());
-
-        /**
-         * Starts slider and define available execution speeds
-         */
-        slider = new JSlider(JSlider.HORIZONTAL, 100, 1000, 1000);
-        slider.setBackground(Color.LIGHT_GRAY);
-        slider.setForeground(Color.BLACK);
-        slider.setMajorTickSpacing(100);
-        slider.setPaintTicks(true);
-        slider.addChangeListener((ChangeEvent l) -> changeDelay());
-
-        /**
-         * Creates a list of default examples inside the menu bar
-         */
-        examples = new JMenu("Examples");
-        examples.setForeground(Color.DARK_GRAY);
-        for (int i = 1; i <= 2; i++) {
-            JMenuItem exampleItem = new JMenuItem("Example #" + i);
-            exampleItem.addActionListener(e -> setExampleChosen(exampleItem.getText().split("#")[1]));
-            examples.add(exampleItem);
-        }
-
-        /**
-         * Starts help button and define a default message at Util class
-         */
-        help = new JButton("Help");
-        help.setBackground(Color.LIGHT_GRAY);
-        help.setForeground(Color.DARK_GRAY);
-        help.setBorder(BorderFactory.createEmptyBorder());
-        help.setMargin(new Insets(10, 10, 10,10));
-        help.addActionListener(e -> helpDialog.showMessageDialog(null, Util.getHelp()));
-        helpDialog = new JOptionPane();
-
-        /**
-         * Starts run op mode button and define its listener
-         */
-        continuousOp = new JRadioButtonMenuItem("Run");
-        continuousOp.setMaximumSize(new Dimension(100, 20));
-        continuousOp.setBackground(Color.LIGHT_GRAY);
-        continuousOp.setForeground(Color.DARK_GRAY);
-        continuousOp.setSelected(true);
-        continuousOp.addActionListener(e -> opModeListener());
-
-        /**
-         * Starts debug op mode button and define its listener
-         */
-        debugOp = new JRadioButtonMenuItem("Debug");
-        debugOp.setMaximumSize(new Dimension(100, 20));
-        debugOp.setBackground(Color.LIGHT_GRAY);
-        debugOp.setForeground(Color.DARK_GRAY);
-        debugOp.addActionListener(e -> opModeListener());
-
-        /**
-         * Adds both buttons as group inside the interface
-         */
-        operation = new ButtonGroup();
-        operation.add(continuousOp);
-        operation.add(debugOp);
-
-        /**
-         * Labels used inside the interface
-         */
-        JLabel op = new JLabel("Operation Mode: ");
-        op.setForeground(Color.DARK_GRAY);
-        JLabel speed = new JLabel("Execution Speed: ");
-        speed.setForeground(Color.DARK_GRAY);
-
-        /**
-         * Adds every component in the menu bar
-         */
-        menuBar.add(op);
-        menuBar.add(continuousOp);
-        menuBar.add(debugOp);
-        menuBar.add(new JSeparator());
-        menuBar.add(speed);
-        menuBar.add(slider);
-        menuBar.add(new JSeparator());
-        menuBar.add(examples);
-        menuBar.add(help);
+    public GUI(Memory mem, Cpu cpu, Loader loader, MacroProcessor mp, Assembler assembler, Linker linker){
 
         this.cpu = cpu;
         this.mem = mem;
         this.loader = loader;
+        this.mp = mp;
+        this.assembler = assembler;
+        this.linker = linker;
 
         /**
-         * Defines labels and panels used in the interface
+         * Define variables related to the running process
          */
-        JLabel inputLabel = new JLabel("INPUT", JLabel.CENTER);
-        inputLabel.setForeground(Color.WHITE);
-        inputPanel = new JPanel();
-        inputPanel.setBackground(Color.DARK_GRAY);
-        inputPanel.setMaximumSize(new Dimension(400, 2));
-        inputPanel.add(inputLabel);
-        JLabel memoryLabel = new JLabel("MEMORY", JLabel.CENTER);
-        memoryLabel.setForeground(Color.WHITE);
+        steps = new ArrayList<>();
+        files = new ArrayList<>();
+        isInitialProcess = true;
+
+        /**
+         * Define panels used in the interface
+         */
+        JPanel sourceCodePanel = new CustomInputPanel("FILE #1");
+        firstFileField = new JTextField();
+        firstFileField.setPreferredSize(new Dimension(150, 20));
+        sourceCodePanel.add(firstFileField, BorderLayout.CENTER);
+
+        JPanel libraryPanel = new CustomInputPanel("FILE #2");
+        secondFileField = new JTextField();
+        secondFileField.setPreferredSize(new Dimension(150, 20));
+        libraryPanel.add(secondFileField, BorderLayout.CENTER);
+
+        inputsPanel = new JPanel();
+        TitledBorder inputsBorder = BorderFactory.createTitledBorder(
+                BorderFactory.createEtchedBorder(EtchedBorder.LOWERED),
+                "Inputs");
+        inputsPanel.setMaximumSize(new Dimension(350, 100));
+        inputsBorder.setTitleColor(Color.LIGHT_GRAY);
+        inputsPanel.setBorder(inputsBorder);
+        inputsPanel.setBackground(Color.DARK_GRAY);
+        inputsPanel.add(sourceCodePanel);
+        inputsPanel.add(libraryPanel);
+
         memoryPanel = new JPanel();
         memoryPanel.setBackground(Color.DARK_GRAY);
         memoryPanel.setMaximumSize(new Dimension(200, 2));
-        memoryPanel.add(memoryLabel);
-        JLabel outputLabel = new JLabel("OUTPUT", JLabel.CENTER);
-        outputLabel.setForeground(Color.WHITE);
-        outputPanel = new JPanel();
-        outputPanel.setBackground(Color.DARK_GRAY);
-        outputPanel.setMaximumSize(new Dimension(400, 2));
-        outputPanel.add(outputLabel);
 
-        currentLineMap = new HashMap<>();
-        currentLine = 0;
-        isLoading = true;
-        currentInstructions = new String[0];
+        instructionLabel = new JLabel();
+        instructionLabel.setFont(new Font(Font.MONOSPACED, Font.BOLD, 25));
+        instructionLabel.setForeground(Color.GREEN);
+
+        instructionPanel = new JPanel();
+        instructionPanel.add(instructionLabel);
+        instructionPanel.setLayout(new GridBagLayout());
+        instructionPanel.setMaximumSize(new Dimension(350, 95));
+        instructionPanel.setBackground(Color.DARK_GRAY);
+        TitledBorder instructionBorder = BorderFactory.createTitledBorder(
+                BorderFactory.createEtchedBorder(EtchedBorder.LOWERED),
+                "Current Instruction");
+        instructionBorder.setTitleColor(Color.LIGHT_GRAY);
+        instructionPanel.setBorder(instructionBorder);
 
         /**
-         * Changes style of registers label and value
+         * Change style of registers label and value
          */
-        pcLabel = new JLabel("PC: ");
-        pcLabel.setForeground(Color.LIGHT_GRAY);
-        spLabel = new JLabel("SP: ");
-        spLabel.setForeground(Color.LIGHT_GRAY);
-        accLabel = new JLabel("ACC: ");
-        accLabel.setForeground(Color.LIGHT_GRAY);
-        mopLabel = new JLabel("MOP: ");
-        mopLabel.setForeground(Color.LIGHT_GRAY);
-        riLabel = new JLabel("RI: ");
-        riLabel.setForeground(Color.LIGHT_GRAY);
-        reLabel = new JLabel("RE: ");
-        reLabel.setForeground(Color.LIGHT_GRAY);
-
+        JPanel pcPanel = new RegisterPanel("PC: ");
         pcValueLabel = new JLabel(cpu.getPc());
         pcValueLabel.setForeground(Color.LIGHT_GRAY);
+        pcPanel.add(pcValueLabel);
+
+        JPanel spPanel = new RegisterPanel("SP: ");
         spValueLabel = new JLabel(cpu.getSp());
         spValueLabel.setForeground(Color.LIGHT_GRAY);
+        spPanel.add(spValueLabel);
+
+        JPanel accPanel = new RegisterPanel("ACC: ");
         accValueLabel = new JLabel(cpu.getAcc());
         accValueLabel.setForeground(Color.LIGHT_GRAY);
+        accPanel.add(accValueLabel);
+
+        JPanel mopPanel = new RegisterPanel("MOP: ");
         mopValueLabel = new JLabel();
         mopValueLabel.setForeground(Color.LIGHT_GRAY);
+        mopPanel.add(mopValueLabel);
+
+        JPanel riPanel = new RegisterPanel("RI: ");
         riValueLabel = new JLabel(cpu.getRi());
         riValueLabel.setForeground(Color.LIGHT_GRAY);
+        riPanel.add(riValueLabel);
+
+        JPanel rePanel = new RegisterPanel("RE: ");
         reValueLabel = new JLabel(cpu.getRe());
         reValueLabel.setForeground(Color.LIGHT_GRAY);
+        rePanel.add(reValueLabel);
+
+        registersPanel = new JPanel();
+        registersPanel.setLayout(new BoxLayout(registersPanel, BoxLayout.Y_AXIS));
+        registersPanel.setMaximumSize(new Dimension(400, 200));
+        TitledBorder registerBorder = BorderFactory.createTitledBorder(
+                BorderFactory.createEtchedBorder(EtchedBorder.LOWERED),
+                "Registers");
+        registerBorder.setTitleColor(Color.LIGHT_GRAY);
+        registersPanel.setBorder(registerBorder);
+        registersPanel.setBackground(Color.DARK_GRAY);
+        registersPanel.add(pcPanel);
+        registersPanel.add(spPanel);
+        registersPanel.add(accPanel);
+        registersPanel.add(mopPanel);
+        registersPanel.add(riPanel);
+        registersPanel.add(rePanel);
 
         /**
-         * Creates READ instruction dialog
+         * Create READ instruction dialog
          * and sends it to be used at CPU class.
          */
         JOptionPane inputDialog = new JOptionPane();
@@ -248,32 +190,7 @@ public class GUI extends JFrame {
         cpu.setUserInput(inputDialog);
 
         /**
-         * Creates user instructions area
-         */
-        textArea = new JTextArea();
-        textArea.setLineWrap(true);
-        textArea.setWrapStyleWord(true);
-        textArea.setBackground(Color.LIGHT_GRAY);
-        textArea.setForeground(Color.WHITE);
-        textArea.setForeground(Color.DARK_GRAY);
-
-        /**
-         * Defines execution and error colors used to highlight instructions
-         */
-        highlighter = (DefaultHighlighter)textArea.getHighlighter();
-        executionColor = new DefaultHighlighter.DefaultHighlightPainter( Color.YELLOW );
-        errorColor = new DefaultHighlighter.DefaultHighlightPainter(Color.RED);
-
-        /**
-         * Allow instructions text area to be scrolled vertically only
-         */
-        textAreaScrollPane = new JScrollPane(textArea,
-                ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        textAreaScrollPane.setMaximumSize(new Dimension(400, 700));
-
-        /**
-         * Starts console area and send it to the CPU
+         * Start console area and send it to the CPU
          * It'll be used when the WRITE instruction is executed
          */
         consoleArea = new JTextArea();
@@ -287,40 +204,32 @@ public class GUI extends JFrame {
         consoleAreaScrollPane = new JScrollPane(consoleArea,
                 ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        consoleAreaScrollPane.setMaximumSize(new Dimension(400, 100));
+        consoleAreaScrollPane.setMaximumSize(new Dimension(350, 300));
+        consoleAreaScrollPane.setBackground(Color.DARK_GRAY);
+        consoleAreaScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        consoleAreaScrollPane.getVerticalScrollBar().setBackground(Color.DARK_GRAY);
+        consoleAreaScrollPane.getVerticalScrollBar().setUI(new CustomScroll());
+        TitledBorder consoleBorder = BorderFactory.createTitledBorder(
+                BorderFactory.createEtchedBorder(EtchedBorder.LOWERED),
+                "Output");
+        consoleBorder.setTitleColor(Color.LIGHT_GRAY);
+        consoleAreaScrollPane.setBorder(consoleBorder);
 
         /**
-         * Starts user buttons and its listeners
+         * Start user buttons and its listeners
          */
-        runButton = new JButton();
-        runButton.setText("Run");
-        runButton.setBackground(Color.GRAY);
-        runButton.setForeground(Color.WHITE);
-        runButton.addActionListener(e -> {
-            try {
-                runButtonListener();
-            } catch (InterruptedException interruptedException) {
-                interruptedException.printStackTrace();
-            }
-        });
+        runButton = new CustomButton("Run", 30, 30);
+        runButton.addActionListener(e -> programTranslation());
 
-        cleanButton = new JButton();
-        cleanButton.setText("Clean");
-        cleanButton.setBackground(Color.GRAY);
-        cleanButton.setForeground(Color.WHITE);
+        cleanButton = new CustomButton("Clean", 25, 25);
         cleanButton.addActionListener(e -> cleanButtonListener());
 
-        stepButton = new JButton();
-        stepButton.setText("Step");
-        stepButton.setBackground(Color.GRAY);
-        stepButton.setForeground(Color.WHITE);
-        opModeListener();
+        stepButton = new CustomButton("Step", 29, 29);
         stepButton.addActionListener(e -> {
-            try {
-                runButtonListener();
-            } catch (InterruptedException interruptedException) {
-                interruptedException.printStackTrace();
-            }
+            if (!steps.isEmpty() && !steps.contains(false))
+                step();
+            else
+                programTranslation();
         });
 
         /**
@@ -340,63 +249,121 @@ public class GUI extends JFrame {
         memoryScrollPane = new JScrollPane(memoryTable);
         memoryScrollPane.setBorder(BorderFactory.createEmptyBorder());
         memoryScrollPane.getVerticalScrollBar().setBackground(Color.DARK_GRAY);
-        memoryScrollPane.getVerticalScrollBar().setUI(new BasicScrollBarUI(){
-            @Override
-            protected void configureScrollBarColors(){
-                this.thumbColor = Color.GRAY;
-            }
+        memoryScrollPane.getVerticalScrollBar().setUI(new CustomScroll());
 
-            @Override
-            protected JButton createDecreaseButton(int orientation)  {
-                return new BasicArrowButton(orientation,
-                                    UIManager.getColor(Color.GRAY),
-                                    UIManager.getColor(Color.GRAY),
-                                    UIManager.getColor("ScrollBar.thumbDarkShadow"),
-                                    UIManager.getColor(Color.GRAY));
-            }
-
-            @Override
-            protected JButton createIncreaseButton(int orientation)  {
-                return new BasicArrowButton(orientation,
-                        UIManager.getColor(Color.GRAY),
-                        UIManager.getColor(Color.GRAY),
-                        UIManager.getColor("ScrollBar.thumbDarkShadow"),
-                        UIManager.getColor(Color.GRAY));
-            }
-        });
         JPanel panel = new JPanel();
         panel.setBackground(Color.DARK_GRAY);
         memoryScrollPane.setCorner(JScrollPane.UPPER_RIGHT_CORNER, panel);
-        memoryScrollPane.setMaximumSize(new Dimension(200, 700));
+        memoryScrollPane.setMaximumSize(new Dimension(200, 500));
+        memoryScrollPane.setBackground(Color.DARK_GRAY);
+        TitledBorder memoryBorder = BorderFactory.createTitledBorder(
+                BorderFactory.createEtchedBorder(EtchedBorder.LOWERED),
+                "Memory");
+        memoryBorder.setTitleColor(Color.LIGHT_GRAY);
+        memoryScrollPane.setBorder(memoryBorder);
 
         /**
-         * Defines timer initial delay and its listener
+         * Start helpButton button and define a default message at Util class
          */
-        timer = new Timer(slider.getValue(), e -> stepButtonListener());
+        helpButton = new JButton();
+        helpButton.setFocusPainted(false);
+        helpButton.setBorderPainted(false);
+        helpButton.setBorder(null);
+        helpButton.setMargin(new Insets(0, 0, 0, 0));
+        helpButton.setContentAreaFilled(false);
+        Image img = null;
+        try {
+            img = ImageIO.read(getClass().getResource("icons/information.png"));
+            helpButton.setIcon(new ImageIcon(img));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        helpButton.addActionListener(e -> consoleArea.setText(Util.getHelp()));
 
         /**
-         * Initiates GUI
+         * Start run op mode button and define its listener
          */
-        layout = new GroupLayout(getContentPane());
+        continuousOp = new JRadioButton("Run");
+        continuousOp.setMaximumSize(new Dimension(100, 20));
+        continuousOp.setForeground(Color.DARK_GRAY);
+        continuousOp.setFocusPainted(false);
+        continuousOp.setBorderPainted(false);
+        continuousOp.setSelected(true);
+        continuousOp.addActionListener(e -> opModeListener());
+
+        /**
+         * Start debug op mode button and define its listener
+         */
+        debugOp = new JRadioButton("Debug");
+        debugOp.setMaximumSize(new Dimension(100, 20));
+        debugOp.setFocusPainted(false);
+        debugOp.setBorderPainted(false);
+        debugOp.setForeground(Color.DARK_GRAY);
+        debugOp.addActionListener(e -> opModeListener());
+
+        /**
+         * Slider that changes running speed
+         */
+        speedSlider = new JSlider(1, 10, 1);
+        speedSlider.setUI(new CustomSlider(speedSlider));
+        speedSlider.addChangeListener(e -> changeSpeed());
+
+        opModeListener();
+
+        /**
+         * Settings button
+         */
+        JPanel csp = new CustomSettingsPanel(continuousOp, debugOp, speedSlider);
+        settingsPanel = new JOptionPane();
+        settingsButton = new JButton();
+        settingsButton.setFocusPainted(false);
+        settingsButton.setBorderPainted(false);
+        settingsButton.setBorder(null);
+        settingsButton.setMargin(new Insets(0, 0, 0, 0));
+        settingsButton.setContentAreaFilled(false);
+        Image img2 = null;
+        try {
+            img2 = ImageIO.read(getClass().getResource("icons/wrench.png"));
+            settingsButton.setIcon(new ImageIcon(img2));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        settingsButton.addActionListener(e ->
+                settingsPanel.showOptionDialog(this, csp, "Settings",
+                        JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null,
+                        new Object[]{}, null));
+
+        /**
+         * Define timer initial delay and its listener
+         */
+        timer = new Timer(1100 - speedSlider.getValue() * 100, e -> step());
+
+        /**
+         * Initiate GUI
+         */
         initComponents();
 
     }
 
-
     /**
-     * Starts interface's main components.
+     * Start interface's main components.
      */
     private void initComponents() {
 
         getContentPane().setBackground(Color.DARK_GRAY);
-        getContentPane().setLayout(layout);
-        getContentPane().setPreferredSize(new Dimension(800, 700));
-        setJMenuBar(menuBar);
-        layout.setAutoCreateGaps(true);
-        layout.setAutoCreateContainerGaps(true);
+        getContentPane().setLayout(new CustomLayout(getContentPane(),
+                inputsPanel, instructionPanel, consoleAreaScrollPane,
+                registersPanel, runButton, stepButton, cleanButton,
+                memoryScrollPane, settingsButton, helpButton));
+        getContentPane().setPreferredSize(new Dimension(800, 500));
 
-        layout.setHorizontalGroup(getHorizontalGroup());
-        layout.setVerticalGroup(getVerticalGroup());
+        Image img = null;
+        try {
+            img = ImageIO.read(getClass().getResource("icons/binary-code.png"));
+            setIconImage(img);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         setTitle("Calingaert Computer");
         setResizable(false);
@@ -406,201 +373,167 @@ public class GUI extends JFrame {
     }
 
     /**
-     * Positions layout components horizontally.
-     */
-    private GroupLayout.Group getHorizontalGroup() {
-
-        return layout.createSequentialGroup()
-                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
-                        .addComponent(inputPanel)
-                        .addComponent(textAreaScrollPane)
-                        .addComponent(outputPanel)
-                        .addComponent(consoleAreaScrollPane))
-                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
-                        .addGap(200)
-                        .addGroup(layout.createSequentialGroup()
-                                .addComponent(pcLabel)
-                                .addComponent(pcValueLabel)
-                                .addGap(30))
-                        .addGroup(layout.createSequentialGroup()
-                                .addComponent(spLabel)
-                                .addComponent(spValueLabel)
-                                .addGap(30))
-                        .addGroup(layout.createSequentialGroup()
-                                .addComponent(accLabel)
-                                .addComponent(accValueLabel)
-                                .addGap(30))
-                        .addGroup(layout.createSequentialGroup()
-                                .addComponent(mopLabel)
-                                .addComponent(mopValueLabel)
-                                .addGap(30))
-                        .addGroup(layout.createSequentialGroup()
-                                .addComponent(riLabel)
-                                .addComponent(riValueLabel)
-                                .addGap(30))
-                        .addGroup(layout.createSequentialGroup()
-                                .addComponent(reLabel)
-                                .addComponent(reValueLabel)
-                                .addGap(30))
-                        .addGap(130)
-                        .addComponent(runButton)
-                        .addGap(30)
-                        .addComponent(cleanButton)
-                        .addGap(30)
-                        .addComponent(stepButton))
-                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
-                        .addComponent(memoryPanel)
-                        .addComponent(memoryScrollPane));
-
-    }
-
-    /**
-     * Positions layout components vertically.
-     */
-    private GroupLayout.Group getVerticalGroup() {
-
-        return layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
-                .addGroup(layout.createSequentialGroup()
-                        .addComponent(inputPanel)
-                        .addComponent(textAreaScrollPane)
-                        .addComponent(outputPanel)
-                        .addComponent(consoleAreaScrollPane))
-                .addGroup(layout.createSequentialGroup()
-                        .addGap(200)
-                        .addGroup(layout.createParallelGroup()
-                                .addComponent(pcLabel)
-                                .addComponent(pcValueLabel)
-                                .addGap(30))
-                        .addGroup(layout.createParallelGroup()
-                                .addComponent(spLabel)
-                                .addComponent(spValueLabel)
-                                .addGap(30))
-                        .addGroup(layout.createParallelGroup()
-                                .addComponent(accLabel)
-                                .addComponent(accValueLabel)
-                                .addGap(30))
-                        .addGroup(layout.createParallelGroup()
-                                .addComponent(mopLabel)
-                                .addComponent(mopValueLabel)
-                                .addGap(30))
-                        .addGroup(layout.createParallelGroup()
-                                .addComponent(riLabel)
-                                .addComponent(riValueLabel)
-                                .addGap(30))
-                        .addGroup(layout.createParallelGroup()
-                                .addComponent(reLabel)
-                                .addComponent(reValueLabel)
-                                .addGap(30))
-                        .addGap(130)
-                        .addComponent(runButton)
-                        .addGap(30)
-                        .addComponent(cleanButton)
-                        .addGap(30)
-                        .addComponent(stepButton))
-                .addGroup(layout.createSequentialGroup()
-                        .addComponent(memoryPanel)
-                        .addComponent(memoryScrollPane));
-
-
-    }
-
-    /**
-     * Set highlighter current position.
      * Execute one instruction at a time.
      * In case of exception the error message is shown in the output.
      */
-    private void stepButtonListener() {
-
-        highlight(executionColor);
+    private void step() {
 
         try {
-            cpu.execute(mem);
+            cpu.execute();
+            instructionLabel.setText(Util.getCurrentInstruction(
+                    cpu.getPc(),
+                    cpu.getRi(),
+                    mem.getMem()));
         } catch (Exception e) {
             consoleArea.append("\n" + e.getMessage() + "\n");
-            highlight(errorColor);
-            if (continuousOp.isSelected()) {
-                runButton.setEnabled(true);
-                timer.stop();
-            }
-            setOperationState(true, true);
-            isLoading = true;
-            currentInstructions = new String[0];
-            cleanButton.setEnabled(true);
+            instructionLabel.setText(Util.getCurrentInstruction(
+                    cpu.getPc(),
+                    cpu.getRi(),
+                    mem.getMem()));
+            refresh();
             return;
         }
 
         updateGUI();
 
-        currentLine = currentLineMap.get(cpu.getPc());
+    }
+
+    /**
+     * Take care of every program step before memory execution
+     */
+    private void programTranslation() {
+
+        if (isInitialProcess)
+            if (!initializeProcess()) return;
+
+        boolean hasTwoSegments = files.size() == 2;
+        int stepLocation = 0;
+        ArrayList<String> auxFiles = new ArrayList<>();
+        if (!steps.get(0) || !steps.get(1)) auxFiles.add(files.get(0));
+        if (hasTwoSegments && (!steps.get(2) || !steps.get(3))) auxFiles.add(files.get(1));
+
+        try {
+
+            for (String file : auxFiles) {
+
+                // MacroProcessor
+                stepLocation = (hasTwoSegments && auxFiles.size() == 1) ? 2 : 0;
+                if (isValidStep(stepLocation)) {
+                    mp.execute(file);
+                    if (!nextStep("MacroProcessor: MASMAPRG.asm generated.", stepLocation)) return;
+                }
+
+                // Assembler
+                stepLocation = (hasTwoSegments && auxFiles.size() == 1) ? 3 : 1;
+                if (isValidStep(stepLocation)) {
+                    System.out.println(file);
+                    assembler.execute(file);
+                    if (!nextStep("Assembler: " + file.split("\\.")[0] + ".lst and " +
+                            file.split("\\.")[0] + ".obj generated.", stepLocation)) return;
+                }
+
+
+            }
+
+            // Linker
+            stepLocation = hasTwoSegments ? 4 : 2;
+            if (isValidStep(stepLocation)) {
+                if (hasTwoSegments)
+                    linker.execute(files.get(0), files.get(1));
+                else
+                    linker.execute(files.get(0), null);
+                if (!nextStep("Linker: " + files.get(0).split("\\.")[0] +
+                        ".hpx generated.", stepLocation)) return;
+            }
+
+            // Loader
+            stepLocation = hasTwoSegments ? 5 : 3;
+            if (isValidStep(stepLocation)) {
+                loader.execute(files.get(0).split("\\.")[0] + ".hpx");
+                updateGUI();
+                cpu.init();
+                if (!nextStep("Loader: source code loaded in memory.", stepLocation)) return;
+            }
+
+            if (continuousOp.isSelected())
+                timer.start();
+
+        } catch (Exception e) {
+            consoleArea.append("\n" + e.getMessage() + "\n");
+            refresh();
+        }
 
     }
 
     /**
-     * Check for errors before attempting to run.
-     * If Run is selected, it starts the timer between instructions.
-     * If Debug is selected, it executes one and awaits user action.
+     * Check for errors and define GUI running state
      */
-    private void runButtonListener() throws InterruptedException {
+    private boolean initializeProcess() {
 
-        if (textArea.getText().length() == 0) {
-            consoleArea.append("\nCan't run! Empty editor.\n");
-            return;
+        instructionLabel.setText("");
+        consoleArea.setText("");
+
+        String[] firstFileExtension = firstFileField.getText().split("\\.");
+        String[] secondFileExtension = secondFileField.getText().split("\\.");
+
+        if (firstFileExtension.length > 2 || secondFileExtension.length > 2) {
+            consoleArea.append("\nWrong file format.\n");
+            return false;
         }
 
-        if (isSyntaxWrong()) {
-            consoleArea.append("\nCheck syntax! Only binary code allowed.\n");
-            return;
+        if (firstFileExtension.length == 1) {
+            consoleArea.append("\nCan't run! FILE #1 field is empty.\n");
+            return false;
         }
 
-
-        if (currentInstructions.length == 0)
-            currentInstructions = textArea.getText().trim().split("\\r?\\n");
-
-
-        if (!currentInstructions[currentInstructions.length-1].equals("0000000000001011")) {
-            consoleArea.append("\nSTOP instruction missing!\n");
-            currentInstructions = new String[0];
-            return;
+        if (firstFileExtension.length == 2 && !firstFileExtension[1].equals("asm")) {
+            consoleArea.append("\nWrong extension on FILE #1. Only .asm allowed.\n");
+            return false;
         }
 
-        if (isLoading) {
-            refresh();
-            fillCurrentLineMap();
+        if (secondFileExtension.length == 2 && !secondFileExtension[1].equals("asm")) {
+            consoleArea.append("\nWrong extension on FILE #2. Only .asm allowed.\n");
+            return false;
         }
 
         cleanButton.setEnabled(false);
         setOperationState(false, false);
-        textArea.setEditable(false);
-        examples.setEnabled(false);
+        firstFileField.setEditable(false);
+        secondFileField.setEditable(false);
 
-        if (debugOp.isSelected()) slider.setEnabled(false);
+        if (debugOp.isSelected()) speedSlider.setEnabled(false);
 
         if (continuousOp.isSelected()) runButton.setEnabled(false);
 
-        if (continuousOp.isSelected()) {
-            timer.start();
-        } else {
-            stepButtonListener();
+        files.add(firstFileField.getText());
+        steps.addAll(Arrays.asList(false, false, false, false));
+        if (!secondFileField.getText().equals("")) {
+            files.add(secondFileField.getText());
+            steps.addAll(Arrays.asList(false, false));
         }
 
+        isInitialProcess = false;
+
+        return true;
     }
 
     /**
-     * Removes highlighter from previous instruction and
-     * create a new highlight on current instruction.
+     * Allow to perform a next step
      */
-    private void highlight(DefaultHighlighter.DefaultHighlightPainter color) {
-
-        highlighter.removeAllHighlights();
-        try {
-            highlighter.addHighlight(
-                    textArea.getLineStartOffset(currentLine),
-                    textArea.getLineEndOffset(currentLine),
-                    color);
-        } catch (BadLocationException e) {
-            e.printStackTrace();
+    private boolean nextStep(String text, int stepLocation) {
+        consoleArea.append("\n" + text + "\n");
+        if (debugOp.isSelected()) {
+            steps.set(stepLocation, true);
+            return false;
         }
+        return true;
+    }
 
+    /**
+     * Check whether is a valid next step or not
+     */
+    private boolean isValidStep(int stepLocation) {
+        return continuousOp.isSelected() || steps.get(stepLocation) == false;
     }
 
     /**
@@ -614,8 +547,8 @@ public class GUI extends JFrame {
     }
 
     /**
-     * Updates memory list new values.
-     * Updates registers new values.
+     * Update memory list new values.
+     * Update registers new values.
      */
     private void updateGUI() {
 
@@ -630,21 +563,23 @@ public class GUI extends JFrame {
     }
 
     /**
-     * Updates GUI components after user action.
-     * Restarts Memory, CPU and Loader.
+     * Update GUI components after user action.
+     * Restart Memory, CPU and Loader.
      */
     private void refresh() {
 
         cleanButton.setEnabled(true);
         setOperationState(true, true);
         opModeListener();
-        textArea.setEditable(true);
-        examples.setEnabled(true);
-        slider.setEnabled(true);
 
-        if (!currentLineMap.isEmpty()) currentLineMap.clear();
-        currentLine = 0;
-        isLoading = true;
+        if (continuousOp.isSelected()) timer.stop();
+
+        firstFileField.setEditable(true);
+        secondFileField.setEditable(true);
+
+        steps.clear();
+        files.clear();
+        isInitialProcess = true;
 
         mem.init();
         cpu.init();
@@ -654,18 +589,20 @@ public class GUI extends JFrame {
     }
 
     /**
-     * Runs when clean button is pressed.
+     * Run when clean button is pressed.
      */
     private void cleanButtonListener() {
 
-        currentLine = 0;
-        textArea.setText("");
+        firstFileField.setText("");
+        secondFileField.setText("");
+        instructionLabel.setText("");
+        consoleArea.setText("");
         refresh();
 
     }
 
     /**
-     * Changes state of operation mode.
+     * Change state of operation mode.
      */
     private void opModeListener() {
 
@@ -674,30 +611,31 @@ public class GUI extends JFrame {
             mopValueLabel.setText("00000000");
             runButton.setEnabled(true);
             stepButton.setEnabled(false);
-            slider.setEnabled(true);
+            speedSlider.setEnabled(true);
 
         } else {
 
             mopValueLabel.setText("00000001");
             runButton.setEnabled(false);
             stepButton.setEnabled(true);
+            speedSlider.setEnabled(false);
 
         }
 
     }
 
     /**
-     * Updates new execution speed selected by user.
+     * Update new execution speed selected by user.
      */
-    private ChangeListener changeDelay() {
+    private ChangeListener changeSpeed() {
 
-        timer.setDelay(slider.getValue());
+        timer.setDelay(1100 - speedSlider.getValue() * 100);
         return null;
 
     }
 
     /**
-     * Gets current values in the memory.
+     * Get current values in the memory.
      */
     private void updateMemoryList() {
 
@@ -706,63 +644,6 @@ public class GUI extends JFrame {
             memoryList[i][0] = Integer.toString(i);
             memoryList[i][1] = valuesList[i];
         }
-
-    }
-
-    /**
-     * Checks if syntax is wrong.
-     * Only binary code (0/1) and \n are allowed.
-     */
-    private boolean isSyntaxWrong() {
-
-        return !textArea.getText().trim().matches("[01\n]+");
-
-    }
-
-    /**
-     * Converts an integer to a 16-bit binary string.
-     */
-    private String bitsPadding(Integer pc) {
-
-        String temp2 = Integer.toString(pc,2);
-        String temp1 = "";
-        for (int i=16; i > temp2.length(); i--) {
-            temp1 += "0";
-        }
-        return temp1.concat(temp2);
-
-    }
-
-    /**
-     * Defines each line of the interface with its
-     * respective instruction.
-     */
-    private void fillCurrentLineMap() {
-
-        int pc = 13;
-        int line = 0;
-
-        for(String instruction : currentInstructions) {
-            loader.loadAllWordsFromString(instruction);
-            currentLineMap.put(bitsPadding(pc), line);
-            switch (instruction.length()) {
-                case 16 -> pc += 1;
-                case 32 -> pc += 2;
-                case 48 -> pc += 3;
-            }
-            line++;
-        }
-        isLoading = false;
-    }
-
-    /**
-     * Write the chosen example in the editor.
-     */
-    private ActionListener setExampleChosen(String index) {
-
-        String example = Util.getExample(Integer.parseInt(index));
-        textArea.setText(example);
-        return null;
 
     }
 

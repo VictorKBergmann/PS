@@ -1,50 +1,8 @@
 package gui;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 
 public class Util {
-
-    /**
-     * HashMap containing all default examples.
-     */
-    private static HashMap<Integer, String> examples;
-    static {
-            examples = new HashMap<>();
-            //EVEN NUMBER TEST
-            examples.put(1, "00000000000011000000000000100100\n" +
-                    "00000000000000110000000000100100\n" +
-                    "00000000000001000000000000011100\n" +
-                    "00000000010001100000000000000010\n" +
-                    "00000000000001010000000000011001\n" +
-                    "00000000000000000000000000010001\n" +
-                    "000000000100110100000000001001000000000000000001\n" +
-                    "00000000000000110000000000100100\n" +
-                    "00000000000010000000000000100100\n" +
-                    "0000000000001011");
-            // FACTORIAL
-            examples.put(2, "00000000000011000000000000100110\n" +
-                    "00000000000000110000000000100110\n" +
-                    "00000000010001100000000000000001\n" +
-                    "00000000000001000000000000100010\n" +
-                    "00000000000011110000000000011001\n" +
-                    "00000000000000000000000000010001\n" +
-                    "00000000000001110000000000100111\n" +
-                    "00000000000011100000000000100110\n" +
-                    "00000000000001110000000000100110\n" +
-                    "00000000000000110000000000100111\n" +
-                    "0000000000001001\n" +
-                    "00000000000010000000000000100110\n" +
-                    "0000000000001011");
-    }
-
-    /**
-     * Send the instructions according to the chosen example.
-     */
-    public static String getExample(int val) {
-
-        return examples.get(val);
-
-    }
 
     /**
      * Returns the default text to the help dialog.
@@ -78,15 +36,99 @@ public class Util {
                 "   STOP(11): end of execution\n" +
                 "   STORE(07): opd1 <- ACC D/In\n" +
                 "   SUB(06): ACC <- ACC - opd1 D/In/Im\n" +
-                "   WRITE(08): Output stream <- opd1 D/In/Im\n" +
-                "Rules:\n" +
-                "   1 - Instructions must be only in BINARY code with its respective bit sizes.\n" +
-                "   2 - Instructions must be separate by only ONE \\n.\n" +
-                "   3 - You can only choose one operation mode at a time.\n" +
-                "Custom Examples:\n" +
-                "   1 - Checks if user input is an even number.\n" +
-                "   2 - Calculates factorial number from user input.";
+                "   WRITE(08): Output stream <- opd1 D/In/Im\n";
 
+    }
+
+    public static String getCurrentInstruction(String pc, String ri, ArrayList<String> mem) {
+
+        int position = Integer.parseInt(pc, 2);
+        String data;
+        ArrayList<String> instruction = new ArrayList<>();
+
+        position++;
+        data = String.valueOf(Integer.parseInt(mem.get(position), 2));
+
+        switch (ri.substring(12, 16)) {
+
+            case "0000":
+                instruction.add("BR");
+                instruction.add(getData(ri, data));
+                break;
+            case "0001":
+                instruction.add("BRPOS");
+                instruction.add(getData(ri, data));
+                break;
+            case "0010":
+                instruction.add("ADD");
+                instruction.add(getData(ri, data));
+                break;
+            case "0011":
+                instruction.add("LOAD");
+                instruction.add(getData(ri, data));
+                break;
+            case "0100":
+                instruction.add("BRZERO");
+                instruction.add(getData(ri, data));
+                break;
+            case "0101":
+                instruction.add("BRNEG");
+                instruction.add(getData(ri, data));
+                break;
+            case "0110":
+                instruction.add("SUB");
+                instruction.add(getData(ri, data));
+                break;
+            case "0111":
+                instruction.add("STORE");
+                instruction.add(getData(ri, data));
+                break;
+            case "1000":
+                instruction.add("WRITE");
+                instruction.add(getData(ri, data));
+                break;
+            case "1010":
+                instruction.add("DIVIDE");
+                instruction.add(getData(ri, data));
+                break;
+            case "1011":
+                instruction.add("STOP");
+                break;
+            case "1100":
+                instruction.add("READ ");
+                instruction.add(getData(ri, data));
+                break;
+            case "1101":
+                instruction.add("COPY");
+                instruction.add(getData(ri, data));
+                position++;
+                data = String.valueOf(Integer.parseInt(mem.get(position), 2));
+                instruction.add(getData(ri, data));
+                break;
+            case "1110":
+                instruction.add("MULT");
+                instruction.add(getData(ri, data));
+                break;
+            case "1111":
+                instruction.add("CALL");
+                instruction.add(getData(ri, data));
+                break;
+            case "1001":
+                instruction.add("RET");
+                break;
+
+        }
+
+        return String.join(" ", instruction);
+    }
+
+    private static String getData(String ri, String data) {
+        if (ri.substring(9, 12).equals("001"))
+            return data + ",I";
+        else if (ri.substring(9, 12).equals("000"))
+            return data;
+        else
+            return "#" + data;
     }
 
 }
