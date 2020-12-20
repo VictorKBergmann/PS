@@ -214,7 +214,7 @@ public class Linker {
             unifiedInstructions.addAll(modulesInstructions.get(module));
 
         ArrayList<Integer> relativePositions = new ArrayList<>();
-        for (int i = 0; i < relocationList.size(); i++)
+        for (int i = modules[0].length(); i < relocationList.size(); i++)
             if (relocationList.get(i).equals("1"))
                 relativePositions.add(i);
 
@@ -233,7 +233,7 @@ public class Linker {
                     if (relativePositions.contains(addr))
                         relativePositions.remove(addr);
                 }
-
+        System.out.println(relativePositions);
         int relocationConstant = modulesInstructions.get(modules[0]).size();
         for (int pos : relativePositions) {
 
