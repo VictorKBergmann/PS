@@ -283,25 +283,21 @@ public class Cpu {
                 boolean flagzin = true;
                 String input;
                 do {
-                    input = JOptionPane.showInputDialog("insert a binary number (16 bits):"); //receive the input
+                    input = JOptionPane.showInputDialog("Insert a number:"); //receive the input
                     if(input == null) { // cancel exception
                         throw new IllegalArgumentException("stopped by user!");
                     }
-                    if(!input.matches("[0-1]+")) {// input in wrong format
-                        JOptionPane.showMessageDialog(null, "Input can only have '0's and '1's.");
-
+                    if(!input.matches("[0-9]+")) {// input in wrong format
+                        JOptionPane.showMessageDialog(null, "Input can only have integers.");
                     }
-                    if(input.length() != 16) {// input in wrong format
-                        JOptionPane.showMessageDialog(null, "Input can only have 16 characters.");
-                    }
-                    if(input.matches("[0-1]+") && input.length() == 16) { flagzin = false; }
+                    if(input.matches("[0-9]+")) { flagzin = false; }
                 } while (flagzin);
                 pc = pointerIncrement(pc);
                 re = mem.getInstruction(toShort(pc)); // re = operator(position to save)
                 if (ri.substring(9, 12).equals("001")) {//check if is indirect
                     re = mem.getData(toShort(re));
                 }
-                mem.setData(toShort(re), input); //write the input on memory
+                mem.setData(toShort(re), toString(Short.parseShort(input))); //write the input on memory
                 break;
 
             case "1101": //COPY (2 operators) cpy op2 on op1
