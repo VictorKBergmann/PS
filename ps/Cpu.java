@@ -254,7 +254,7 @@ public class Cpu {
                     re = value;
                     value = mem.getData(toShort(re));
                 }
-                out.append("\nOutput: " + value + "\n");// output on GUI
+                out.append("\nOutput: " + toShort(value) + "\n");// output on GUI
                 break;
 
             case "1010": //DIVIDE
