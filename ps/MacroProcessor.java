@@ -130,16 +130,19 @@ public class MacroProcessor {
 
         line = getLine(buffer).replaceAll(".SER", ""+ tempLabelCount);
 
-        if(label != null){
-            if( !line.startsWith(" ") ){
-                throw new IllegalArgumentException("Label conflict detected! First line from macro:" + macroPrototype + " -" + line + "- already has a label and the call received a non-paremeter label!");
-            }
-            else{
-                line = line.replaceFirst(" ", label + " ");
-            }
-        }
         while (!oppCode.equals("MEND")) {
 
+            if(label != null){
+                if( !oppCode.equals("MACRO") ){
+                    if( !line.startsWith(" ") ){
+                        throw new IllegalArgumentException("Label conflict detected! First line from macro:" + macroPrototype + " -" + line + "- already has a label and the call received a non-paremeter label!");
+                    }
+                    else{
+                        line = line.replaceFirst(" ", label + " ");
+                        label = null;
+                    }
+                }
+            }
             processLine(buffer);
             line = getLine(buffer).replaceAll(".SER", ""+ tempLabelCount);
 
@@ -166,7 +169,8 @@ public class MacroProcessor {
 
         if (nameTab.isInNameTab(oppCode)) {
             expansionMode(buffer, oppCode);
-        } else if (oppCode.equals("MACRO")) {
+        }
+        else if (oppCode.equals("MACRO")) {
             boolean flag = definitionMode(buffer);
             if(!flag)
                 buffer.close();
