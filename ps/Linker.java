@@ -233,7 +233,7 @@ public class Linker {
                     if (relativePositions.contains(addr))
                         relativePositions.remove(addr);
                 }
-        System.out.println(relativePositions);
+
         int relocationConstant = modulesInstructions.get(modules[0]).size();
         for (int pos : relativePositions) {
 
