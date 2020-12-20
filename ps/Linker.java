@@ -213,15 +213,36 @@ public class Linker {
         for (String module : modules)
             unifiedInstructions.addAll(modulesInstructions.get(module));
 
+        ArrayList<Integer> relativePositions = new ArrayList<>();
+        for (int i = 0; i < relocationList.size(); i++)
+            if (relocationList.get(i).equals("1"))
+                relativePositions.add(i);
+
+        int sum;
+
         for (String module : modules)
             for (Map.Entry<String, ArrayList<Integer>> entry : modulesUsageTable.get(module).entrySet())
                 for (Integer addr : entry.getValue()) {
-                    unifiedInstructions.set(addr,
-                            Integer.parseInt(unifiedInstructions.get(addr), 2) + bitsPadding(linkageSymbolTable.get(entry.getKey())));
+                    sum = Integer.parseInt(unifiedInstructions.get(addr), 2) +
+                            linkageSymbolTable.get(entry.getKey());
+                    unifiedInstructions.set(addr, bitsPadding(sum));
 
                     if (relocationList.get(addr).equals("0"))
                         relocationList.set(addr, "1");
+
+                    if (relativePositions.contains(addr))
+                        relativePositions.remove(addr);
                 }
+
+        int relocationConstant = modulesInstructions.get(modules[0]).size();
+        for (int pos : relativePositions) {
+
+            sum = Integer.parseInt(unifiedInstructions.get(pos), 2) +
+                    relocationConstant;
+            unifiedInstructions.set(pos, bitsPadding(sum));
+
+        }
+
 
     }
 
@@ -233,10 +254,6 @@ public class Linker {
         File file = new File(modules[0].split("\\.")[0] + ".hpx");
 
         try {
-
-            boolean created = file.createNewFile();
-            if (!created)
-                throw new IllegalArgumentException("Couldn't create file!");
 
             FileWriter fileWriter = new FileWriter(file, false);
             PrintWriter printWriter = new PrintWriter(fileWriter);
@@ -271,7 +288,7 @@ public class Linker {
 
 
         } catch (IOException ioException) {
-            ioException.printStackTrace();
+            throw new IllegalArgumentException("Problem creating file!");
         }
 
     }

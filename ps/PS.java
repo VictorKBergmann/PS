@@ -18,8 +18,8 @@ public class PS {
         Assembler assembler = new Assembler();
         Linker linker = new Linker();
         Memory mem = new Memory();
-        Loader loader = new Loader(13, mem);
-        Cpu cpu = new Cpu();
+        Loader loader = new Loader(mem);
+        Cpu cpu = new Cpu(mem);
 
         EventQueue.invokeLater(new Runnable() {
                 @Override
