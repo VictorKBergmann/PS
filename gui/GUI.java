@@ -379,16 +379,14 @@ public class GUI extends JFrame {
     private void step() {
 
         try {
-            cpu.execute();
             instructionLabel.setText(Util.getCurrentInstruction(
                     cpu.getPc(),
-                    cpu.getRi(),
                     mem.getMem()));
+            cpu.execute();
         } catch (Exception e) {
             consoleArea.append("\n" + e.getMessage() + "\n");
             instructionLabel.setText(Util.getCurrentInstruction(
                     cpu.getPc(),
-                    cpu.getRi(),
                     mem.getMem()));
             refresh();
             return;

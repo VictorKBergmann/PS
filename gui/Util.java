@@ -40,78 +40,79 @@ public class Util {
 
     }
 
-    public static String getCurrentInstruction(String pc, String ri, ArrayList<String> mem) {
+    public static String getCurrentInstruction(String pc, ArrayList<String> mem) {
 
         int position = Integer.parseInt(pc, 2);
         String data;
         ArrayList<String> instruction = new ArrayList<>();
 
+        String currentInstruction = mem.get(position);
         position++;
         data = String.valueOf(Integer.parseInt(mem.get(position), 2));
 
-        switch (ri.substring(12, 16)) {
+        switch (currentInstruction.substring(12, 16)) {
 
             case "0000":
                 instruction.add("BR");
-                instruction.add(getData(ri, data));
+                instruction.add(getData(currentInstruction, data));
                 break;
             case "0001":
                 instruction.add("BRPOS");
-                instruction.add(getData(ri, data));
+                instruction.add(getData(currentInstruction, data));
                 break;
             case "0010":
                 instruction.add("ADD");
-                instruction.add(getData(ri, data));
+                instruction.add(getData(currentInstruction, data));
                 break;
             case "0011":
                 instruction.add("LOAD");
-                instruction.add(getData(ri, data));
+                instruction.add(getData(currentInstruction, data));
                 break;
             case "0100":
                 instruction.add("BRZERO");
-                instruction.add(getData(ri, data));
+                instruction.add(getData(currentInstruction, data));
                 break;
             case "0101":
                 instruction.add("BRNEG");
-                instruction.add(getData(ri, data));
+                instruction.add(getData(currentInstruction, data));
                 break;
             case "0110":
                 instruction.add("SUB");
-                instruction.add(getData(ri, data));
+                instruction.add(getData(currentInstruction, data));
                 break;
             case "0111":
                 instruction.add("STORE");
-                instruction.add(getData(ri, data));
+                instruction.add(getData(currentInstruction, data));
                 break;
             case "1000":
                 instruction.add("WRITE");
-                instruction.add(getData(ri, data));
+                instruction.add(getData(currentInstruction, data));
                 break;
             case "1010":
                 instruction.add("DIVIDE");
-                instruction.add(getData(ri, data));
+                instruction.add(getData(currentInstruction, data));
                 break;
             case "1011":
                 instruction.add("STOP");
                 break;
             case "1100":
-                instruction.add("READ ");
-                instruction.add(getData(ri, data));
+                instruction.add("READ");
+                instruction.add(getData(currentInstruction, data));
                 break;
             case "1101":
                 instruction.add("COPY");
-                instruction.add(getData(ri, data));
+                instruction.add(getData(currentInstruction, data));
                 position++;
                 data = String.valueOf(Integer.parseInt(mem.get(position), 2));
-                instruction.add(getData(ri, data));
+                instruction.add(getData(currentInstruction, data));
                 break;
             case "1110":
                 instruction.add("MULT");
-                instruction.add(getData(ri, data));
+                instruction.add(getData(currentInstruction, data));
                 break;
             case "1111":
                 instruction.add("CALL");
-                instruction.add(getData(ri, data));
+                instruction.add(getData(currentInstruction, data));
                 break;
             case "1001":
                 instruction.add("RET");
@@ -122,10 +123,10 @@ public class Util {
         return String.join(" ", instruction);
     }
 
-    private static String getData(String ri, String data) {
-        if (ri.substring(9, 12).equals("001"))
+    private static String getData(String currentInstruction, String data) {
+        if (currentInstruction.substring(9, 12).equals("001"))
             return data + ",I";
-        else if (ri.substring(9, 12).equals("000"))
+        else if (currentInstruction.substring(9, 12).equals("000"))
             return data;
         else
             return "#" + data;
