@@ -123,15 +123,25 @@ public class MacroProcessor {
         indexDefTab = nameTab.getStart(nameTab.indexOfName(macroName));
         String macroPrototype = defTab.get(indexDefTab);
 
-        createArgumentsWithOmission(line, macroPrototype);  //set up arguments from macro invocation in ArgTAB
+        String label = createArgumentsWithOmission(line, macroPrototype);  //set up arguments from macro invocation in ArgTAB
+
         arch.write("*Macro: "+ macroPrototype+ " Args: " + argTab.getArgsLastLevel());
         arch.newLine();
 
-        line = getLine(buffer).replaceAll(".SER", ""+ tempLabelCount);;
+        line = getLine(buffer).replaceAll(".SER", ""+ tempLabelCount);
+
+        if(label != null){
+            if( !line.startsWith(" ") ){
+                throw new IllegalArgumentException("Label conflict detected! First line from macro:" + macroPrototype + " -" + line + "- already has a label and the call received a non-paremeter label!");
+            }
+            else{
+                line = line.replaceFirst(" ", label + " ");
+            }
+        }
         while (!oppCode.equals("MEND")) {
 
             processLine(buffer);
-            line = getLine(buffer).replaceAll(".SER", ""+ tempLabelCount);;
+            line = getLine(buffer).replaceAll(".SER", ""+ tempLabelCount);
 
         }
         indexDefTab = tempIndexDefTab;
@@ -166,16 +176,21 @@ public class MacroProcessor {
         }
     }
 
-    public void createArgumentsWithOmission(String line, String macroPrototype) {
+    public String createArgumentsWithOmission(String line, String macroPrototype) {
 
         String[] aux = macroPrototype.split("\\s+");
         int numParameters = (aux[2].split(",")).length;
         boolean labelFlag = false;
+        String label = null;
+        aux = line.split("\\s+");
 
-        if(aux[0].startsWith("&")){
+        if(macroPrototype.startsWith("&")){
             labelFlag = true;
         }
-        aux = line.split("\\s+");
+        else if(line.charAt(0) != ' '){
+            label = aux[0];
+        }
+
         if (aux.length > 1) {
 
             int lastParameterFlag = 0;
@@ -203,6 +218,7 @@ public class MacroProcessor {
                 throw new IllegalArgumentException("Macro call: " +line+ " -prototype: "+ macroPrototype+ " -Number of Arguments doesn't match!");
             }
         }
+        return label;
     }
 
     public void createArguments(String line) {
