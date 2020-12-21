@@ -59,7 +59,7 @@ public class Cpu {
         acc = "0000000000000000";
         sp = "0000000000000000";
         //pc = "0000000000001101";
-        pc = bitsPadding((short) (mem.getStackSize() + 2));
+        pc = bitsPadding((short) (mem.getStackSize() + mem.getInitialPosition() + 2));
 
     }
 

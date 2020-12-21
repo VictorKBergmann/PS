@@ -7,6 +7,7 @@ public class Memory {
     private ArrayList<String> mem;
     private int dataPointer; // pointer to the end of instructions
     private int stackSize;
+    private int initialPosition;
 
     public Memory(){
         mem = new ArrayList<>(); // inicialize array
@@ -21,13 +22,11 @@ public class Memory {
         this.stackSize = stackSize;
     }
 
+    public int getInitialPosition() {return initialPosition;}
 
-    /**
-     *
-     * @param position on memory
-     * @return the instruction
-     */
-
+    public void setInitialPosition(int initialPosition) {
+        this.initialPosition = initialPosition;
+    }
 
     public String getInstruction(int position) {     
         return (mem.get(position));

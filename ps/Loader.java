@@ -53,61 +53,6 @@ public class Loader {
         }
     }
 
-    /**
-     * load instructions from string to the memory
-     * @param string instructions
-     */
-    public void loadAllWordsFromString(String string){
-
-        int flag;
-        int flag2=-1;  
-        String line;
-        Scanner scanner = new Scanner(string); //Scanner is better to read files, it's a list of strings to separate lines
-
-        while(scanner.hasNextLine()){
-
-            line = scanner.nextLine();
-            ++flag2; // used to know when it has Exception
-
-            if( line.length() == 16 || line.length() == 32 || line.length() == 48 ){// test if the line has the right length
-                // 16 == instruction, 32 == instruction + operator, 48 == instruction + 2 operator
-
-                for(flag = 0; flag< line.length(); ++flag){// test if it has non binary symbols
-                    if( !(line.codePointAt(flag) == 48 || line.codePointAt(flag) == 49) ){
-                        System.out.println("symbol "+ line.charAt(flag) + " on position " + flag +" of instruction " +flag2 + " isn't binary, instruction will be ignored.");
-                        flag = line.length() +1;
-                     }
-                }
-                if( flag == line.length() ){
-                    //saves instruction and operator on memory
-                    // 16 == instruction, 32 == instruction + operator, 48 == instruction + 2 operator
-                    if(flag ==16){
-                        memory.setData(position, line);
-                        ++position;
-                    }
-                    else if(flag ==32){
-                        memory.setData(position, line.substring(0, 16));
-                        ++position;
-                        memory.setData(position, line.substring(16, 32));
-                        ++position;
-                    }
-                    else{
-                        memory.setData(position, line.substring(0, 16));
-                        ++position;
-                        memory.setData(position, line.substring(16, 32));
-                        ++position;
-                        memory.setData(position, line.substring(32, 48));
-                        ++position;
-                    }
-                }
-            }
-            else{
-                System.out.println("instruction "+ flag2 + " has not the right length. it will be ignored");
-            }
-        }//end of while
-        memory.setDataPointer(position);// saves the end of instructions
-    }//end of loadAllWordsFromString
-
     public String readLinkerFile(String str) {
         try {
             return Files.readString(Path.of(str), StandardCharsets.UTF_8);
@@ -227,6 +172,7 @@ public class Loader {
         }//end of while
         memory.setDataPointer(auxPosition);// saves the end of instructions
         memory.setStackSize(stackSize);
+        memory.setInitialPosition(initPositionMem);
     }//end of loadAllWordsFromString
 
     private String bitsPadding(Integer value) {
@@ -243,71 +189,4 @@ public class Loader {
         return bitsPadding(newPosition);
     }
 
-
-    /**
-     * this function is not used anymore, we do this on
-     * GUI and use loadAllWordsFromString
-     * they do the same thing, but loadAllWordsFromString receive a String
-     *
-     *
-     * load instructions from a file to the memory
-     * @param adress of file with instructions
-     **
-     */
-    public void loadAllWordsFromFile(String adress){
-
-        try{
-            readFile(adress);
-            String line;
-            int position = initPosition;
-            int flag;
-            int flag2=0;  
-            
-            BufferedReader buffer = new BufferedReader(input);
-            line = buffer.readLine();
-            
-            while ( line != null ) {
-
-                if( line.length() == 16 || line.length() == 32 || line.length() == 48 ){
-
-                    for(flag = 0; flag< line.length(); ++flag){
-                        if( !(line.codePointAt(flag) == 48 || line.codePointAt(flag) == 49) ){
-                            System.out.println("symbol "+ line.charAt(flag) + " on position " + flag +" of instruction " +flag2 + " isn't binary, instruction will be ignored.");
-                            flag = line.length() +1;
-                        }
-                    }
-                    if( flag == line.length() ){
-
-                        if(flag ==16){
-                            memory.setData(position, line);
-                            ++position;
-                        }
-                        else if(flag ==32){
-                            memory.setData(position, line.substring(0, 16));
-                            ++position;
-                            memory.setData(position, line.substring(16, 32));
-                            ++position;
-                        }
-                        else{
-                            memory.setData(position, line.substring(0, 16));
-                            ++position;
-                            memory.setData(position, line.substring(16, 32));
-                            ++position;
-                            memory.setData(position, line.substring(32, 48));
-                            ++position;
-                        }
-                    }
-                }
-                else{
-                    System.out.println("instruction "+ flag2 + " has not the right length. it will be ignored");
-                }
-                line = buffer.readLine();
-                ++flag2;
-            }
-            memory.setDataPointer(position);
-        }
-        catch(Exception error){
-            System.out.println("couldn't read the file.");
-        }
-    }
 }
