@@ -41,13 +41,15 @@ public class Linker {
 
         readFiles();
 
-        checkErrors();
+        if (modules.length != 1) {
+            checkErrors();
 
-        // First step
-        createLinkageSymbolTable();
+            // First step
+            createLinkageSymbolTable();
 
-        //Second step
-        unifyModules();
+            //Second step
+            unifyModules();
+        }
 
         writeFile();
 
@@ -145,29 +147,26 @@ public class Linker {
      */
     private void checkErrors() {
 
-        if (modules.length == 2) {
+        // START defined on segment 2
+        if (modulesInitialAddress.get(1) > 0)
+            throw new IllegalArgumentException("START instruction defined on Segment 2");
 
-            // START defined on segment 2
-            if (modulesInitialAddress.get(1) > 0)
-                throw new IllegalArgumentException("START instruction defined on Segment 2");
+        // global symbol not defined
+        for (String usedSymbol : modulesUsageTable.get(modules[0]).keySet())
+            if (!modulesDefinitionTable.get(modules[1]).containsKey(usedSymbol))
+                throw new IllegalArgumentException("Global symbol not defined: "
+                        + usedSymbol + "[" + modules[0] + "]");
 
-            // global symbol not defined
-            for (String usedSymbol : modulesUsageTable.get(modules[0]).keySet())
-                if (!modulesDefinitionTable.get(modules[1]).containsKey(usedSymbol))
-                    throw new IllegalArgumentException("Global symbol not defined: "
-                            + usedSymbol + "[" + modules[0] + "]");
+        for (String usedSymbol : modulesUsageTable.get(modules[1]).keySet())
+            if (!modulesDefinitionTable.get(modules[0]).containsKey(usedSymbol))
+                throw new IllegalArgumentException("Global symbol not defined: "
+                        + usedSymbol + "[" + modules[1] + "]");
 
-            for (String usedSymbol : modulesUsageTable.get(modules[1]).keySet())
-                if (!modulesDefinitionTable.get(modules[0]).containsKey(usedSymbol))
-                    throw new IllegalArgumentException("Global symbol not defined: "
-                            + usedSymbol + "[" + modules[1] + "]");
-
-            // global symbol already defined
-            for (String defSymbol : modulesDefinitionTable.get(modules[0]).keySet())
-                if (modulesDefinitionTable.get(modules[1]).containsKey(defSymbol))
-                    throw new IllegalArgumentException("Global symbol already defined: "
-                            + defSymbol + "[" + modules[1] + "/" + modules[0] + "]");
-        }
+        // global symbol already defined
+        for (String defSymbol : modulesDefinitionTable.get(modules[0]).keySet())
+            if (modulesDefinitionTable.get(modules[1]).containsKey(defSymbol))
+                throw new IllegalArgumentException("Global symbol already defined: "
+                        + defSymbol + "[" + modules[1] + "/" + modules[0] + "]");
 
     }
 
@@ -278,8 +277,12 @@ public class Linker {
 
             int idx = 0;
             for (Integer instrSize : instructionsLength) {
-                for (int i = idx; i < instrSize + idx; i++)
-                    printWriter.print(unifiedInstructions.get(i));
+                for (int i = idx; i < instrSize + idx; i++) {
+                    if (modules.length == 1)
+                        printWriter.print(modulesInstructions.get(modules[0]).get(i));
+                    else
+                        printWriter.print(unifiedInstructions.get(i));
+                }
                 printWriter.println("");
                 idx += instrSize;
             }
