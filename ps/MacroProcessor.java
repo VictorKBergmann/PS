@@ -63,7 +63,7 @@ public class MacroProcessor {
             //line = buffer.readLine();
             line = getLine(buffer);
 
-            if (nameTab.isInNameTab(oppCode)) {
+            if (nameTab.isInNameTab(oppCode)) {     //in case of a macro redefinition
                 deleteFromDefTab();
             }
 
@@ -102,10 +102,10 @@ public class MacroProcessor {
 
     public void expansionMode(BufferedReader buffer, String macroName) throws IOException {
         ++expanding;
-        ++labelCount;
+        ++labelCount;   // .SER count
 
-        int tempIndexDefTab = indexDefTab;
-        int tempLabelCount = labelCount;
+        int tempIndexDefTab = indexDefTab;  // local variable in case of multiple expansions
+        int tempLabelCount = labelCount;    // local variable in case of multiple expansions
         indexDefTab = nameTab.getStart(nameTab.indexOfName(macroName));
         String macroPrototype = defTab.get(indexDefTab); //getting prototype of macro from defTAB
 
@@ -118,19 +118,19 @@ public class MacroProcessor {
 
         while (!oppCode.equals("MEND")) {
 
-            if(label != null){
-                if( !oppCode.equals("MACRO") ){
-                    if( !line.startsWith(" ") ){
+            if(label != null){      // case of a no parameter Label passed in the macro call
+                if( !oppCode.equals("MACRO") ){ // jump a macro definition
+                    if( !line.startsWith(" ") ){  
                         throw new IllegalArgumentException("Label conflict detected! First line from macro:" + macroPrototype + " -" + line + "- already has a label and the call received a non-paremeter label!");
                     }
-                    else{
+                    else{   // the no parameter label will be putted in the first instruction of the macro, and if there is not a instruction, the label will be losted
                         line = line.replaceFirst(" ", label + " ");
                         label = null;
                     }
                 }
             }
             processLine(buffer);
-            line = getLine(buffer).replaceAll(".SER", ""+ tempLabelCount);//getting line already replacing .SER by label counter
+            line = getLine(buffer).replaceAll(".SER", ""+ tempLabelCount);  //getting line already replacing .SER by label counter
 
         }
         indexDefTab = tempIndexDefTab;
@@ -153,10 +153,10 @@ public class MacroProcessor {
     public void processLine(BufferedReader buffer) throws IOException {
         //String oppCode = getOppCode(line);
 
-        if (nameTab.isInNameTab(oppCode)) {
+        if (nameTab.isInNameTab(oppCode)) {     // case of a macro call
             expansionMode(buffer, oppCode);
         }
-        else if (oppCode.equals("MACRO")) {
+        else if (oppCode.equals("MACRO")) {     //case of a macro definition
             boolean flag = definitionMode(buffer);
             if(!flag)
                 buffer.close();
@@ -177,38 +177,38 @@ public class MacroProcessor {
         if(macroPrototype.startsWith("&")){//checking if macro prototype has a label
             labelFlag = true;
         }
-        else if(line.charAt(0) != ' '){
+        else if(line.charAt(0) != ' '){ // if macro prototype doesnt has a label, but the call has, its a no parameter label
             label = aux[0];
         }
 
         if (aux.length > 1) {//adding arguments in argTAB
 
             int lastParameterFlag = 0;
-            if (aux[2].endsWith(",")) {
+            if (aux[2].endsWith(",")) {     // in case of omission of the last parameter
                 lastParameterFlag = 1;
             }
             aux = aux[2].split(",");
 
-            if(aux.length + lastParameterFlag == numParameters){
+            if(aux.length + lastParameterFlag == numParameters){    // checking number of parameters in the call
                 int i;
                 for (i = 0; i < aux.length; ++i) {
                     argTab.add(aux[i]);
                 }
-                if (lastParameterFlag == 1) {
+                if (lastParameterFlag == 1) {   // case of omission of the last parameter
                     ++i;
                     argTab.add("");
                 }
-                if(labelFlag){
+                if(labelFlag){    // the label parameter is the last parameter to be added in the argTab
                     argTab.add(line.substring(0, line.indexOf(' ')));
                     ++i;
                 }
-                argTab.addSizeLastLevel(i);
+                argTab.addSizeLastLevel(i); // number of parameters (label parameter included)
             }
             else{
                 throw new IllegalArgumentException("Macro call: " +line+ " -prototype: "+ macroPrototype+ " -Number of Arguments doesn't match!");
             }
         }
-        return label;
+        return label;   // return the no parameter label or NULL
     }
     public void deleteFromDefTab() {
         int index = nameTab.indexOfName(oppCode);
@@ -223,7 +223,7 @@ public class MacroProcessor {
         nameTab.delete(index);
     }
 
-    public void createArguments(String line) {
+    public void createArguments(String line) { 
 
         char[] arrayChar;
 
@@ -273,8 +273,8 @@ public class MacroProcessor {
         for (int i = 1; i < temp + 1; ++i) {
 
             a = "#(" + (i) + ")";
-            while (line.contains(a)) {// getting the right argument from argTAB and replacing
-                line = line.replace(a, argTab.getName(i - 1));
+            while (line.contains(a)) {
+                line = line.replace(a, argTab.getName(i - 1));  // getting the right argument from argTAB and replacing
             }
 
         }
@@ -319,7 +319,7 @@ public class MacroProcessor {
         return line;
     }
 
-    public String getOppCode(String line) {
+    public String getOppCode(String line) { // return the oppCode or "" if doesnt has one
 
         // [ [<label>] <opcode> [<operand1> [<operand2>]] ]  [<comentário>]
         String[] aux = line.split("\\s+");
